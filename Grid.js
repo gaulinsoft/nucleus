@@ -19,46 +19,90 @@
 (function(window, $, $$, undefined)
 {
     // Create the development environment
-    $$.dev = $$.dev || {};
+    $$.dev = $$.asObject($$.dev);
+
+    // Create the set helper function
+    var $_set = function($this, $k, $v)
+    {
+        // Get the value type
+        var $type = $$.type($v);
+
+        // If the value is a string
+        if ($type === 'string')
+        {
+            // Trim the value
+            $v = $v.trim();
+
+            // If a value was provided
+            if ($v)
+            {
+                // Set a flag if the value is a percentage
+                var $isP = $this['_' + $k + 'IsP'] = $v[$v.length - 1] === '%';
+
+                // If the width is not a percentage
+                if (!$isP)
+                {
+                    // If the value ends with "px", remove it from the value
+                    if ($v.length > 1 && $v.substr($v.length - 2) === 'px')
+                        $v = $v.substr(0, $v.length - 2);
+                }
+                // Remove the percent sign from the value
+                else
+                    $v = $v.substr(0, $v.length - 1);
+
+                // Cast the value as an integer
+                $v = $$.asInt($v.trim(), true);
+            }
+            // Reset the value
+            else
+                $v = 0;
+
+            // Set the value (greater than or equal to zero)
+            $this['_' + $k] = Math.max($v, 0);
+        }
+        else
+        {
+            // Set the value (greater than or equal to zero)
+            $this['_' + $k]         = $type === 'number' ? Math.max($v, 0) : 0;
+            $this['_' + $k + 'IsP'] = false;
+        }
+    };
 
     // Create the grid class
-    var $_grid = $$.dev.Grid = $$('abstract', function($rows, $columns, $width, $height)
+    $$.dev.Grid = $$('abstract', function($rows, $columns, $width, $height)
     {
         // FORMAT $rows
         // FORMAT $columns
-        $rows    = $$.asInt($rows);
-        $columns = $$.asInt($columns);
+        $rows    = $$.asInt($rows, true);
+        $columns = $$.asInt($columns, true);
 
-        // If the row and column counts are finite
-        if (isFinite($rows) && isFinite($columns))
+        // Set the row and column counts (greater than or equal to one)
+        this.columns = Math.max($columns, 1);
+        this.rows    = Math.max($rows, 1);
+
+        // If a width and height were provided
+        if ($$.isObject($width) && $$.isObject($height))
         {
-            // Set the row and column counts (greater than or equal to one)
-            this._c = Math.max($columns, 1);
-            this._r = Math.max($rows, 1);
+            // Set the width and height
+            $_set(this, 'h', $height);
+            $_set(this, 'w', $width);
         }
 
-        // Set the width and height
-        this.height = $height;
-        this.width  = $width;
-
         // Calculate the column width and row height
-        var $columnWidth = (this._w / this._c) + (this._wIsP ? '%' : 'px' );
-        var $rowHeight   = (this._h / this._r) + (this._hIsP ? '%' : 'px' );
+        var $columnWidth = 100 / this.columns + '%';
+        var $rowHeight   = 100 / this.rows + '%';
 
-        // Store the self reference
-        var $self = this.__self;
-
-        for (var $c = 0, $i = this._c, $j = this._r; $c < $i; $c++)
+        for (var $i = 0, $c = this.columns, $r = this.rows; $i < $c; $i++)
         {
             // Create the column
             var $column = $('<div />')
                 // Add the column and column-instance classes to the column
-                .addClass($_grid.columnClass)
-                .addClass($_grid.columnClassPrefix + $c)
+                .addClass(this.__type.columnClass)
+                .addClass(this.__type.columnClassPrefix + $i)
                 // Set the column width
                 .css('width', $columnWidth);
 
-            for (var $r = 0; $r < $j; $r++)
+            for (var $j = 0; $j < $r; $j++)
                 $column
                     // Append the row to the column
                     .append
@@ -66,30 +110,35 @@
                         // Create the row element
                         $('<div />')
                             // Add the row and row-instance classes to the row
-                            .addClass($_grid.rowClass)
-                            .addClass($_grid.rowClassPrefix + $r)
+                            .addClass(this.__type.rowClass)
+                            .addClass(this.__type.rowClassPrefix + $j)
                             // Set the row height
                             .css('height', $rowHeight)
                     );
 
             // Set the column in the grid
-            $self[$c] = $column[0];
+            this.__self[$i] = $column[0];
         }
 
         // Set the grid length
-        $self.length = this._c;
+        this.__self.length = this.columns;
     },
+    // ----- PRIVATE -----
+    {},
+    // ----- PROTECTED -----
     {
         // WIDTH/HEIGHT
-        _h: $$.protected(100),
-        _w: $$.protected(100),
+        '_h': 100,
+        '_w': 100,
 
         // PERCENTAGE
-        _hIsP: $$.protected(true),
-        _wIsP: $$.protected(true),
-
+        '_hIsP': true,
+        '_wIsP': true
+    },
+    // ----- PUBLIC -----
+    {
         // WIDTH/HEIGHT ACCESSORS
-        height: $$.public('abstract',
+        'abstract height':
         {
             'get': function()
             {
@@ -102,51 +151,11 @@
             },
             'set': function($v)
             {
-                // Get the value type
-                var $type = $$.type($v);
-
-                // If the value is a string
-                if ($type === 'string')
-                {
-                    // Trim the value
-                    $v = $v.trim();
-
-                    // If a value was provided
-                    if ($v)
-                    {
-                        // Set a flag if the height is a percentage
-                        this._hIsP = $v.charAt($v.length - 1) === '%';
-
-                        // If the height is not a percentage
-                        if (!this._hIsP)
-                        {
-                            // If the value ends with "px", remove it from the value
-                            if ($v.length > 1 && $v.substr($v.length - 2) === 'px')
-                                $v = $v.substr(0, $v.length - 2);
-                        }
-                        // Remove the percent sign from the value
-                        else
-                            $v = $v.substr(0, $v.length - 1);
-
-                        // Cast the value as an integer
-                        $v = $$.asInt($v.trim());
-                    }
-                    // Reset the value
-                    else
-                        $v = 0;
-
-                    // Set the height (greater than or equal to zero)
-                    this._h = isFinite($v) ? Math.max($v, 0) : 0;
-                }
-                else
-                {
-                    // Set the height (greater than or equal to zero)
-                    this._h    = $type === 'number' ? Math.max($v, 0) : 0;
-                    this._hIsP = false;
-                }
+                // Set the height
+                $_set(this, 'h', $v);
             }
-        }),
-        width: $$.public('abstract',
+        },
+        'abstract width':
         {
             'get': function()
             {
@@ -159,76 +168,20 @@
             },
             'set': function($v)
             {
-                // Get the value type
-                var $type = $$.type($v);
-
-                // If the value is a string
-                if ($type === 'string')
-                {
-                    // Trim the value
-                    $v = $v.trim();
-
-                    // If a value was provided
-                    if ($v)
-                    {
-                        // Set a flag if the width is a percentage
-                        this._wIsP = $v.charAt($v.length - 1) === '%';
-
-                        // If the width is not a percentage
-                        if (!this._wIsP)
-                        {
-                            // If the value ends with "px", remove it from the value
-                            if ($v.length > 1 && $v.substr($v.length - 2) === 'px')
-                                $v = $v.substr(0, $v.length - 2);
-                        }
-                        // Remove the percent sign from the value
-                        else
-                            $v = $v.substr(0, $v.length - 1);
-
-                        // Cast the value as an integer
-                        $v = $$.asInt($v.trim());
-                    }
-                    // Reset the value
-                    else
-                        $v = 0;
-                    
-                    // Set the width (greater than or equal to zero)
-                    this._w = isFinite($v) ? Math.max($v, 0) : 0;
-                }
-                else
-                {
-                    // Set the width (greater than or equal to zero)
-                    this._w    = $type === 'number' ? Math.max($v, 0) : 0;
-                    this._wIsP = false;
-                }
+                // Set the width
+                $_set(this, 'w', $v);
             }
-        }),
-        
+        },
+
         // ROWS/COLUMNS
-        _c: $$.protected(1),
-        _r: $$.protected(1),
-
-        // ROWS/COLUMNS ACCESSORS
-        columns: $$.public(
-        {
-            'get': function()
-            {
-                // Return the column count
-                return this._c;
-            }
-        }),
-        rows: $$.public(
-        {
-            'get': function()
-            {
-                // Return the row count
-                return this._r;
-            },
-        }),
-        
+        'columns': ['get', 'private set', 1],
+        'rows':    ['get', 'private set', 1]
+    },
+    // ----- STATIC -----
+    {
         'static columnClass':       'column',
         'static rowClass':          'row',
         'static columnClassPrefix': 'C',
-        'static rowClassPrefix':    'R',
+        'static rowClassPrefix':    'R'
     });
 })(window, jQuery, jTypes);
