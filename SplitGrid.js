@@ -20,14 +20,14 @@
 (function(window, $, $$, undefined)
 {
     // Create the split grid class
-    var $_splitGrid = $$.dev.SplitGrid = $$($$.dev.Grid, function($grid, $dock, $width, $height, $position, $name)
+    $$.dev.SplitGrid = $$.dev.SplitGrid || $$($$.dev.Grid, function($grid, $dock, $width, $height, $position, $name)
     {
         // FORMAT $grid
         // FORMAT $dock
         // FORMAT $position
         // FORMAT $name
         $grid     = $($grid);
-        $dock     = $$.asString($dock);
+        $dock     = $$.asString($dock).toLowerCase();
         $position = $$.asFloat($position);
         $name     = $$.asString($name);
 
@@ -82,7 +82,7 @@
                 this._relative = $rows.eq($dock[0] === 't' ? 1 : 0);
 
                 break;
-                
+
             case 'l':
             case 'left':
             case 'r':
@@ -114,6 +114,10 @@
         this._grid = $grid
             // Add the dock class to the grid
             .addClass(this.dock)
+            // Set the grid height
+            .css('height', this._h + (this._hIsP ? '%' : 'px'))
+            // Set the grid width
+            .css('width', this._w + (this._wIsP ? '%' : 'px'))
             // Append the columns and divider to the grid
             .append($(this.__self))
             .append(this._divider);
@@ -123,7 +127,10 @@
         this.cache();
     },
     // ----- PRIVATE -----
-    {},
+    {
+        // DRAG-STATE
+        '_drag': null
+    },
     // ----- PROTECTED -----
     {
         // POSITION
@@ -132,9 +139,6 @@
         // MAXIMUM/MINIMUM
         '_max': 0.99,
         '_min': 0.01,
-
-        // DRAG-STATE
-        '_drag': null,
 
         // CACHE + REFRESH
         'virtual cache':   function()
@@ -157,7 +161,7 @@
                 // HORIZONTAL
                 case 'bottom':
                 case 'top':
-                    
+
                     // If the layout is docked to the bottom
                     if (this.dock === 'bottom')
                     {
@@ -182,7 +186,7 @@
                 // VERTICAL
                 case 'left':
                 case 'right':
-                    
+
                     // If the layout is docked to the right
                     if (this.dock === 'right')
                     {
@@ -220,7 +224,7 @@
             }
         },
 
-        // JQUERY WRAPPERS
+        // ELEMENTS
         '_absolute': $(),
         '_divider':  $(),
         '_grid':     $(),
@@ -229,8 +233,8 @@
     // ----- PUBLIC -----
     {
         // DOCK + NAME
-        'dock': ['get', 'protected set', ''],
-        'name': ['get', 'protected set', ''],
+        'dock': ['get', 'private set', ''],
+        'name': ['get', 'private set', ''],
 
         // POSITION
         'position':
@@ -345,13 +349,12 @@
                 if (!this._grid)
                     return;
 
-                // If the dock layout is left or right
-                if (this.dock === 'left' || this.dock === 'right')
-                    this._grid
-                        // Set the new grid height
-                        .css('height', this._h + (this._hIsP ? '%' : 'px'));
-                // Refresh the grid
-                else
+                this._grid
+                    // Set the new grid height
+                    .css('height', this._h + (this._hIsP ? '%' : 'px'));
+
+                // If the dock layout is top or bottom, refresh the grid
+                if (this.dock === 'top' || this.dock === 'bottom')
                     this.refresh(true);
             }
         },
@@ -366,13 +369,12 @@
                 if (!this._grid)
                     return;
 
-                // If the dock layout is top or bottom
-                if (this.dock === 'top' || this.dock === 'bottom')
-                    this._grid
-                        // Set the new grid width
-                        .css('width', this._w + (this._wIsP ? '%' : 'px'));
-                // Refresh the grid
-                else
+                this._grid
+                    // Set the new grid width
+                    .css('width', this._w + (this._wIsP ? '%' : 'px'));
+
+                // If the dock layout is left or right, refresh the grid
+                if (this.dock === 'left' || this.dock === 'right')
                     this.refresh(true);
             }
         },
@@ -419,21 +421,21 @@
             $drag.offsetY = $$.asInt(e.pageY, true) - $drag.top;
 
             // If a drag timeout exists, create the drag timeout
-            if ($_splitGrid.dragTimeout)
-                $drag.timeout = setTimeout($_splitGrid._mousetimeout, $_splitGrid.dragTimeout);
+            if ($this.__type.dragTimeout)
+                $drag.timeout = setTimeout($this.__type._mousetimeout, $this.__type.dragTimeout);
 
             // Set the drag-state
             $this._drag = $drag;
 
             $this._grid
                 // Add the "drag" class to the grid
-                .addClass($_splitGrid.dragClass);
+                .addClass($this.__type.dragClass);
 
             $(window.document)
                 // Bind the mousemove event handler to the document
-                .on('mousemove.' + $_splitGrid.eventNamespace, $this, $_splitGrid._mousemove)
+                .on('mousemove.' + $this.__type.eventNamespace, $this, $this.__type._mousemove)
                 // Bind the mouseup event handler to the document
-                .on('mouseup.' + $_splitGrid.eventNamespace, $this, $_splitGrid._mouseup);
+                .on('mouseup.' + $this.__type.eventNamespace, $this, $this.__type._mouseup);
 
             return false;
         },
@@ -455,7 +457,7 @@
                 clearTimeout($drag.timeout);
 
             // Create the drag timeout
-            $drag.timeout = setTimeout($_splitGrid._mousetimeout, $_splitGrid.dragTimeout);
+            $drag.timeout = setTimeout($this.__type._mousetimeout, $this.__type.dragTimeout);
 
             switch ($this.dock)
             {
@@ -512,7 +514,7 @@
         {
             $(window.document)
                 // Trigger the mouse up event handler on the document
-                .triggerHandler('mouseup.' + $_splitGrid.eventNamespace);
+                .triggerHandler('mouseup.' + $this.__type.eventNamespace);
         },
         'static _mouseup':      function(e)
         {
@@ -536,12 +538,12 @@
 
             $this._grid
                 // Remove the "drag" class from the grid
-                .removeClass($_splitGrid.dragClass);
+                .removeClass($this.__type.dragClass);
 
             $(window.document)
                 // Unbind the document event hanlders
-                .unbind('mousemove.' + $_splitGrid.eventNamespace)
-                .unbind('mouseup.' + $_splitGrid.eventNamespace);
+                .unbind('mousemove.' + $this.__type.eventNamespace)
+                .unbind('mouseup.' + $this.__type.eventNamespace);
 
             // Clear the drag-state object
             $this._drag = null;

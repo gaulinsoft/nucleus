@@ -69,7 +69,7 @@
     };
 
     // Create the grid class
-    $$.dev.Grid = $$('abstract', function($rows, $columns, $width, $height)
+    $$.dev.Grid = $$.dev.Grid || $$('abstract', function($rows, $columns, $width, $height)
     {
         // FORMAT $rows
         // FORMAT $columns
@@ -84,8 +84,8 @@
         if ($$.isObject($width) && $$.isObject($height))
         {
             // Set the width and height
-            $_set(this, 'h', $height);
-            $_set(this, 'w', $width);
+            this.height = $height;
+            this.width  = $width;
         }
 
         // Calculate the column width and row height
