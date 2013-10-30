@@ -58,10 +58,12 @@
     $$.dev.Console = $$.dev.Console || $$($$.dev.SplitGrid, function($window, $parent, $width, $height, $position, $name)
     {
         // FORMAT $window
+        // FORMAT $parent
         // FORMAT $name
         $window = $$.isWindowLikeObject($window) ? $window : {};
+        $parent = $($parent);
         $name   = $$.asString($name);
-        
+
         // Create the console element
         var $console = $('<div />')
             // Add the grid class to the console wrapper
@@ -77,6 +79,10 @@
         this._input   = this._absolute;
         this._output  = this._relative;
         this._window  = $window;
+
+        this._output
+            // Bind the scroll event handler to the output element
+            .on('scroll', this.__data, this.__type._output_scroll)
 
         // Create the groups and history arrays along with the profiles and timers lookups
         this._groups   = [];
@@ -107,8 +113,9 @@
             matchBrackets: true
         });
 
-        // Bind the keydown event handler to the code editor
-        this._editor.on('keydown', this.keydown);
+        // Bind the keydown and keyup event handlers to the code editor
+        this._editor.on('keydown', this._keydown);
+        this._editor.on('keyup', this._keyup);
 
         // Set the console wrapper in the window
         $window.console = (
@@ -142,6 +149,8 @@
         // FLAGS
         '_dumping':    false,
         '_evaluating': false,
+        '_locked':     false,
+        '_scrolling':  false,
         '_tracing':    false,
         '_throwing':   false,
 
@@ -151,212 +160,277 @@
         '_timers':   null,
 
         // DUMP
-        'dump': function($element, $object)
+        'dump': function($object)
         {
-            var $array  = $$.isArray($object);
-            var $cutoff = false;
-            var $index  = 0;
-            var $length = 0;
+            // Create the code element
+            var $code = $('<pre />');
 
-            $element
-                .append
-                (
-                    $('<span />')
-                        .text($array ? ' [' : ' {')
-                );
-
-            for (var $key in $object)
+            // If the object is a primitive value
+            if ($$.isPrimitive($object))
             {
-                if ($array && $key != $index)
-                    continue;
+                $code
+                    // Add the primitive class to the code element
+                    .addClass(this.__type.primitiveClass)
+                    // Set the code to the string representation of the primitive
+                    .text($object + '');
 
-                var $pairValue     = $object[$key];
-                var $pairPrimitive = $$.isPrimitive($pairValue);
-                var $pairType      = this._window.jTypes ? this._window.jTypes.type($pairValue) : $$.type($pairValue);
+                // If the object is a primitive string
+                if ($$.isString($object))
+                    $code
+                        // Add the primitive string class to the code element
+                        .addClass(this.__type.primitiveStringClass);
 
-                $key = JSON.stringify($key);
-
-                var $value = $pairPrimitive? $pairValue + '' : $pairType !== 'regexp' ? $pairType[0].toUpperCase() + $pairType.substr(1) : 'RegExp';
-
-                if ($pairType === 'string')
-                    $value = JSON.stringify($value);
-
-                if ($key.length + $value.length + $length <= 50)
-                {
-                    if ($length !== 0)
-                        $element
-                            .append
-                            (
-                                $('<span />')
-                                    .text(', ')
-                            );
-
-                    if (!$array)
-                        $element
-                            .append
-                            (
-                                $('<span />')
-                                    .text($key + ': ')
-                            );
-
-                    $element
-                        .append
-                        (
-                            $($pairPrimitive ? '<span />' : '<i />')
-                                .text($value)
-                        );
-                
-                    $length += $key.length;
-                    $length += $value.length;
-                }
-                else if ($length === 0)
-                {
-                    if (!$array)
-                        $element
-                            .append
-                            (
-                                $('<span />')
-                                    .text($key + ': ')
-                            );
-
-                    $element
-                        .append
-                        (
-                            $($pairPrimitive ? '<span />' : '<i />')
-                                .text($pairType !== 'string' ? $value : $value.substr(0, 50) + '...')
-                        );
-
-                
-                
-                    $length += $key.length;
-                    $length += 50;
-
-                    $cutoff = true;
-
-                    break;
-                }
-                else
-                {
-                    $cutoff = true;
-
-                    break;
-                }
-
-                $index++;
+                // Return the code element
+                return $code;
             }
 
-            if ($cutoff)
-                $element
-                    .append
-                    (
-                        $('<i />')
-                            .text(' ... ')
-                    );
+            // Get the object type (using the jTypes instance in the window context, if available) and global reference name
+            var $type   = this._window.jTypes ? this._window.jTypes.type($object) : $$.type($object);
+            var $global = $type !== 'regexp' ? $type[0].toUpperCase() + $type.substr(1) : 'RegExp';
+            
+            switch ($type)
+            {
+                case 'array':
+                case 'class':
+                case 'instance':
+                case 'object':
+                case 'window':
 
-            $element
-                .append
+                    // Get the casting function (from the window context)
+                    var $cast = $type !== 'class' && $type !== 'instance' ? this._window[$global].prototype.toString : null;
+                    
+                    // If the object is a class, set the casting function to the default class "toString()" method
+                    if ($type === 'class')
+                        $cast = this._window.jTypes ? this._window.jTypes.__class.toString : $$.__class.toString;
+                    // If the object is an instance, set the casting function to the default instance "toString()" method
+                    else if ($type === 'instance')
+                        $cast = this._window.jTypes ? this._window.jTypes.__proto.toString : $$.__proto.toString;
+
+                    // If the object has a self "toString()" function and it is not the casting function
+                    if ($$.isFunction($object.toString) && $object.toString !== $cast)
+                    {
+                        // Get the object text
+                        var $text = $object.toString();
+
+                        // If the object text is a string and it is not a generic object string
+                        if ($$.isString($text) && !$text.match(/^\[(object)\s[_\$a-zA-Z]+[_\$a-zA-Z0-9]*\]$/))
+                        {
+                            $code
+                                // Set the code element text to the object text
+                                .text(' ' + $text);
+
+                            break;
+                        }
+                    }
+
+                    // ##############################
+
+                    var $array  = $type === 'array';
+                    var $cutoff = false;
+                    var $index  = 0;
+                    var $length = 0;
+                    var $substr = false;
+
+                    $code
+                        .append
+                        (
+                            $('<span />')
+                                .text($array ? ' [' : ' {')
+                        );
+
+                    for (var $key in $object)
+                    {
+                        // If the object is an array and the current key is not the current array index, continue
+                        if ($array && $key != $index)
+                            continue;
+                        
+                        var $text  = null;
+                        var $value = $object[$key];
+
+                        var $textKey       = JSON.stringify($key);
+                        var $textPrimitive = $$.isPrimitive($value);
+                        var $textType      = this._window.jTypes ? this._window.jTypes.type($value) : $$.type($value);
+
+                        if ($textPrimitive)
+                            $text = $textType === 'string' ? JSON.stringify($value) : $value + '';
+                        else if ($textType === 'regexp')
+                            $text = 'RegExp';
+                        else
+                            $text = $textType[0].toUpperCase() + $textType.substr(1);
+
+                        if ($length !== 0)
+                        {
+                            $code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text(', ')
+                                );
+
+                            $length += 2;
+                        }
+
+                        // TRIM KEY
+
+                        if (!$array)
+                            $code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text($textKey + ': ')
+                                );
+
+                        // TRIM VALUE (ONLY IF IT IS A STRING PRIMITIVE)
+
+                        $code
+                            .append
+                            (
+                                $($textPrimitive ? '<span />' : '<i />')
+                                    .text($text)
+                            );
+
+                        $length += $textKey.length;
+                        $length += $text.length;
+
+                        // SET CUTOFF FLAG
+
+                        $index++;
+                    }
+
+                    if ($cutoff)
+                        $code
+                            .append
+                            (
+                                $('<i />')
+                                    .text(($substr ? '' : ' ') + '... ')
+                            );
+                    
+                    $code
+                        .append
+                        (
+                            $('<span />')
+                                .text($array ? ']' : '}')
+                        );
+
+                    // ##############################
+
+                    break;
+                    
+                case 'boolean':
+                case 'date':
+                case 'number':
+                case 'regexp':
+                case 'string':
+
+                    // Get the string representation of the object
+                    var $string = this._window[$global].prototype.toString.call($object);
+
+                    // If the string is a string
+                    if ($$.isString($string))
+                        $code
+                            // Set the code element text to the string representation of the object
+                            .text(' ' + $string);
+
+                    break;
+
+                case 'error':
+
+                    // Get the error message
+                    var $message = $object.message;
+
+                    // If the error message is a string
+                    if ($$.isString($message))
+                        $code
+                            // Set the code element text to the error message
+                            .text(' ' + $message);
+
+                    break;
+
+                case 'function':
+
+                    // Get the casting function (from the window context), check if the object has a self "toString()" function, and get the object text
+                    var $cast = this._window[$global].prototype.toString;
+                    var $self = $$.isFunction($object.toString);
+                    var $text = $self ? $object.toString() : $cast.call($object);
+
+                    // If the object text is not a string, break
+                    if (!$$.isString($text))
+                        break;
+                    
+                    // If no self "toString()" function was found or it was the casting function
+                    if (!$self || $object.toString === $cast)
+                    {
+                        // Format the function header in the text (and remove the function keyword)
+                        $text = $text.replace(/^\s*(function)\s*([_\$a-zA-Z]*[_\$a-zA-Z0-9]*)?\s*/, '$2').trim();
+                        
+                        // If the function does not have a name, set the function as anonymous
+                        if ($text[0] === '(')
+                            $text = '<anonymous>' + $text;
+                    }
+
+                    $code
+                        // Set the code element text to the string representation of the function
+                        .text(' ' + $text);
+
+                    break;
+
+                default:
+
+                    // Return the code element
+                    return $code;
+            }
+
+            $code
+                // Prepend the global reference name to the code element
+                .prepend
                 (
-                    $('<span />')
-                        .text($array ? ']' : '}')
+                    $('<i />')
+                        // Set the text to the global reference name
+                        .text($global + ':')
                 );
+            
+            // Return the code element
+            return $code;
         },
 
-        // KEYDOWN
-        'keydown': function(editor, e)
+        // SCROLL
+        'scroll': function()
+        {
+            // Set the scrolling flag
+            this._scrolling = true;
+
+            this._output
+                // Set the output scrollbar to the bottom
+                .scrollTop($$.asInt(Math.max(0, $$.asFloat(this._output.prop('scrollHeight')) - $$.asFloat(this._output.height())), true));
+
+            // Reset the scrolling flag
+            this._scrolling = false;
+        },
+
+        // KEYDOWN/KEYUP
+        '_keydown': function(editor, e)
         {
             // Fix the event argument
             e = $.event.fix(e);
 
-            // If either the up or down arrows were pressed
-            if (e.which == 38 || e.which == 40)
-            {
-                // Get the cursor position
-                var $cursor = this._editor.getCursor();
-
-                // If the up arrow was pressed while on the first line
-                if (e.which == 38 && $cursor.line == 0)
-                {
-                    // Prevent the default behavior of the key
-                    e.preventDefault();
-
-                    // If no history is being displayed
-                    if (this._index < 0)
-                    {
-                        // Cache the current code editor value and set the history index to the most recent history
-                        this._cache = this.value;
-                        this._index = this._history.length - 1;
-                    }
-                    // Go back in the history
-                    else
-                        this._index--;
-
-                    // Create the character position
-                    var $ch = 0;
-
-                    // If a valid history index was provided
-                    if (this._index >= 0)
-                    {
-                        // Set the code editor value
-                        this.value = this._history[this._index];
-
-                        // Set the character position to the end of the first line
-                        $ch = this._editor.getLine(0).length;
-                    }
-                    // Fix the history index
-                    else
-                        this._index = 0;
-                    
-                    // Set the code editor cursor position to the first line
-                    this._editor.setCursor(0, $ch);
-                }
-                // If the down arrow was pressed while on the last line
-                else if (e.which == 40 && $cursor.line == this._editor.lineCount() - 1)
-                {
-                    // Prevent the default behavior of the key
-                    e.preventDefault();
-
-                    // If the code editor is currently at a valid history index
-                    if (this._index >= 0)
-                    {
-                        // If going forward has no history left
-                        if (++this._index >= this._history.length)
-                        {
-                            // Reset the history index
-                            this._index = -1;
-
-                            // Set the code editor value to the cached value
-                            this.value = this._cache;
-                        }
-                        // Set the code editor value
-                        else
-                            this.value = this._history[this._index];
-
-                        // Get the last line index and last character position of the last line
-                        var $line = this._editor.lineCount() - 1;
-                        var $ch   = this._editor.getLine($line).length;
-
-                        // Set the code editor cursor position to the last line
-                        this._editor.setCursor($line, $ch);
-                    }
-                }
-            }
-            // If the control key and the enter key were pressed
-            else if (e.ctrlKey && e.which == 13)
-            {
-                // Prevent the default behavior of the key
-                e.preventDefault();
-
-                // Call the evaluate method
-                this.evaluate();
-            }
-            // If the code editor is currently at a valid history index and a non-arrow key was pressed, reset the history index (which will clear the cache)
-            else if (this._index >= 0 && (e.which < 37 || e.which > 40))
-                this._index = -1;
+            // Call the keydown method
+            this.keydown(e);
         },
-        
+        '_keyup':   function(editor, e)
+        {
+            // Fix the event argument
+            e = $.event.fix(e);
+
+            // Call the keyup method
+            this.keyup(e);
+        },
+
         // WRAPPERS
         '$assert':         function($expression)
         {
+            // FORMAT $expression
+            $expression = $$.asBool($expression);
+
             // If the expression is true, return
             if ($expression)
                 return;
@@ -372,7 +446,7 @@
         {
             // Clear the console
             this.clear();
-            
+
             // Call the native console function
             if ($$.isFunction(this._console.clear))
                 return this._console.clear.apply(this._console, arguments);
@@ -412,9 +486,6 @@
         },
         '$group':          function($name)
         {
-            // FORMAT $name
-            $name = $$.asString($name);
-
             // Push the group into the console
             this.groupPush($name, false);
 
@@ -424,9 +495,6 @@
         },
         '$groupCollapsed': function($name)
         {
-            // FORMAT $name
-            $name = $$.asString($name);
-
             // Push the collapsed group into the console
             this.groupPush($name, true);
 
@@ -515,7 +583,7 @@
         {
             // FORMAT $name
             $name = $$.asString($name);
-            
+
             // If any arguments were provided and a timer was not already set
             if (arguments.length && !$$.isFinite(this._timers[$name]))
             {
@@ -569,7 +637,7 @@
             var $minutes      = $_pad($date.getMinutes(), 2);
             var $seconds      = $_pad($date.getSeconds(), 2);
             var $milliseconds = $_pad($date.getMilliseconds(), 3);
-            
+
             // Write the timestamp output
             this.write(this.__type.writeTimeStampClass, this.__type.iconTime, $hours + ':' + $minutes + ':' + $seconds + '.' + $milliseconds, [], 0);
 
@@ -658,6 +726,11 @@
         },
         'groupPush': function($name, $collapsed)
         {
+            // FORMAT $name
+            // FORMAT $collapsed
+            $name      = $$.asString($name);
+            $collapsed = $$.asBool($collapsed);
+
             // Create the group, output, and title elements
             var $group  = $('<div />');
             var $output = $('<div />');
@@ -711,110 +784,127 @@
             this._groups.unshift($output);
         },
 
+        // KEYDOWN/KEYUP
+        'virtual keydown': function(e)
+        {
+            // If either the up or down arrows were pressed
+            if (e.which == 38 || e.which == 40)
+            {
+                // Get the cursor position
+                var $cursor = this._editor.getCursor();
+
+                // If the up arrow was pressed while on the first line
+                if (e.which == 38 && $cursor.line == 0)
+                {
+                    // Prevent the default behavior of the key
+                    e.preventDefault();
+
+                    // Go back in the history
+                    this.back();
+                }
+                // If the down arrow was pressed while on the last line
+                else if (e.which == 40 && $cursor.line == this._editor.lineCount() - 1)
+                {
+                    // Prevent the default behavior of the key
+                    e.preventDefault();
+
+                    // Go forward in the history
+                    this.forward();
+                }
+            }
+            // If the control key and the enter key were pressed
+            else if (e.ctrlKey && e.which == 13)
+            {
+                // Prevent the default behavior of the key
+                e.preventDefault();
+
+                // Call the evaluate method
+                this.evaluate();
+            }
+            // If a non-arrow key was pressed and the code editor is currently at a valid history index, reset the history index (which will clear the cache)
+            else if ((e.which < 37 || e.which > 40) && this._index >= 0)
+                this._index = -1;
+        },
+        'virtual keyup':   $$.empty(),
+
         // WRITE
         'write': function($class, $icon, $title, $arguments, $index)
         {
-            var $timestamp = new Date();
-            var $output    = $('<p />')
+            // FORMAT $class
+            // FORMAT $icon
+            // FORMAT $title
+            // FORMAT $arguments
+            // FORMAT $index
+            $class     = $$.asString($class);
+            $icon      = $$.asString($icon);
+            $title     = $$.asString($title);
+            $arguments = !$$.isArrayLikeObject($arguments) ? $$.asArray($arguments) : $arguments;
+            $index     = $$.asInt($index, true);
+
+            // Create the output element
+            var $output = $('<p />')
+                // Add the class to the output element
                 .addClass($class);
-            
+
+            // If an icon was provided
             if ($icon)
                 $output
-                    .prepend
+                    // Append an image element to the output element
+                    .append
                     (
                         $('<img />')
+                            // Set the image element source to the icon
                             .attr('src', $icon)
-                            .attr('title', $timestamp.toLocaleTimeString())
                     );
 
+            // If a title was provided
             if ($title)
                 $output
+                    // Append a title element to the output element
                     .append
                     (
                         $('<span />')
+                            // Add the title class to the title element
                             .addClass(this.__type.titleClass)
+                            // Set the title element text as the title
                             .text($title)
                     );
 
-            for (var $i = $index || 0, $j = $arguments.length; $i < $j; $i++)
+            for (var $i = $index, $j = $arguments.length; $i < $j; $i++)
             {
-                // Get the current argument
+                // Get the current argument and its type (using the jTypes instance in the window context, if available)
                 var $argument = $arguments[$i];
+                var $type     = this._window.jTypes ? this._window.jTypes.type($argument) : $$.type($argument);
 
-                // If the argument is not a primitive value
-                if (!$$.isPrimitive($argument))
+                $output
+                    // Append the created dump element of the current argument to the output element
+                    .append(this.dump($argument));
+
+                // If the console is throwing an exception and the current argument is an error
+                if (this._throwing && $type === 'error')
                 {
-                    // Get the argument type (using the jTypes instance in the window context, if available) and string value
-                    var $type   = this._window.jTypes ? this._window.jTypes.type($argument) : $$.type($argument);
-                    var $global = $type !== 'regexp' ? $type[0].toUpperCase() + $type.substr(1) : 'RegExp';
-                    var $object = $type === 'class' || $type === 'instance' || $type === 'object';
-                    var $string = $$.isObject($argument) && $$.isFunction($argument.toString) ? $$.asString($argument.toString()) : '';
-
-                    var $code = $('<pre />');
-                    
-                    if ($type === 'function')
-                    {
-                        $string = $string.replace(/^\s*(function)\s*([_\$a-zA-Z]*[_\$a-zA-Z0-9]*)?\s*/, '$2').trim();
-
-                        if ($string[0] === '(')
-                            $string = '<anonymous>' + $string;
-                    }
-                    
-                    if ($type === 'array' || $type === 'window' || $object && $string === '[object ' + $global + ']')
-                        this.dump($code, $argument);
-                    else if ($type === 'error')
-                        $code
-                            .text(' '+ $$.asString($argument.message));
-                    else if ($$.isValueType($argument))
-                        $code
-                            .text(' '+ $argument);
-                    else
-                        $code
-                            .text(' '+ $string);
-
-
-                    $output
-                        .append
-                        (
-                            $code
-                                .prepend
-                                (
-                                    $('<i />')
-                                        .text($global + ':')
-                                )
-                        );
-
-                    if (this._throwing && $type === 'error')
-                    {
-                        // SHOW TRACE (AS PLUS SIGN WITH SLIDEDOWN)
-                    }
-                    else if (this._dumping || $object || $type === 'array')
-                    {
-                        // SHOW KEY-VALUE DUMPS (AS PLUS SIGN WITH SLIDEDOWN)
-                    }
+                    // SHOW TRACE (AS PLUS SIGN WITH SLIDEDOWN)
                 }
-                else
-                    $output
-                        .append
-                        (
-                            $('<pre />')
-                                .addClass(typeof $argument !== 'string' ? 'keyword' : '')
-                                .text($argument + '')
-                        );
+                // If the console is dumping or the current argument is an enumerable object
+                else if (this._dumping || $type === 'array' || $type === 'class' || $type === 'instance' || $type === 'object' || $type === 'window')
+                {
+                    // SHOW KEY-VALUE DUMPS (AS PLUS SIGN WITH SLIDEDOWN)
+                }
             }
-
+            
+            // If any groups exist
             if (this._groups.length > 0)
                 this._groups[0]
+                    // Append the output element to the current group
                     .append($output);
             else
                 this._output
+                    // Append the output element to the output
                     .append($output);
 
-            var $scrollTop = $$.asInt(this._output.prop('scrollHeight') - this._output.height(), true);
-
-            this._output
-                .scrollTop($scrollTop)
-                .scrollLeft(0);
+            // If the output is not locked, scroll the output element to the bottom
+            if (!this._locked)
+                this.scroll();
         }
     },
     // ----- PUBLIC -----
@@ -863,7 +953,7 @@
             {
                 // Push the code into the history array
                 this._history.push($eval);
-                
+
                 // If the history array exceeded the maximum, shift the oldest history from the history array
                 if (this._history.length > this.__type.historyMaximum)
                     this._history.shift();
@@ -918,9 +1008,15 @@
                 this._throwing = false;
             }
 
-            // If no arguments were provided, reset the console value
+            // If no arguments were provided
             if (!$args)
+            {
+                // Scroll the output element to the bottom
+                this.scroll();
+
+                // Reset the console value
                 this.value = '';
+            }
         },
 
         // VALUE
@@ -939,12 +1035,85 @@
                 // Set the code editor value
                 this._editor.setValue($v);
             }
+        },
+
+        // BACK/FORWARD
+        'virtual back':    function($steps)
+        {
+            // FORMAT $steps
+            $steps = $$.isObject($steps) ? Math.max(0, $$.asInt($steps, true)) : 1;
+
+            // If no history exists, return
+            if (!this._history.length)
+                return;
+
+            // If no history is being displayed
+            if (this._index < 0)
+            {
+                // Cache the current code editor value and set the history index to the most recent history
+                this._cache = this.value;
+                this._index = this._history.length - 1;
+            }
+            // Go back in the history by the number of steps
+            else
+                this._index -= $steps;
+
+            // Create the character position
+            var $ch = 0;
+
+            // If a valid history index was provided
+            if (this._index >= 0)
+            {
+                // Set the code editor value
+                this.value = this._history[this._index];
+
+                // Set the character position to the end of the first line
+                $ch = this._editor.getLine(0).length;
+            }
+            // Fix the history index
+            else
+                this._index = 0;
+
+            // Set the code editor cursor position to the first line
+            this._editor.setCursor(0, $ch);
+        },
+        'virtual forward': function($steps)
+        {
+            // FORMAT $steps
+            $steps = $$.isObject($steps) ? Math.max(0, $$.asInt($steps, true)) : 1;
+
+            // If the code editor is currently at a valid history index
+            if (this._index >= 0)
+            {
+                // Go forward in the history by the number of steps
+                this._index += $steps;
+
+                // If going forward has no history left
+                if (this._index >= this._history.length)
+                {
+                    // Reset the history index
+                    this._index = -1;
+
+                    // Set the code editor value to the cached value
+                    this.value = this._cache;
+                }
+                // Set the code editor value
+                else
+                    this.value = this._history[this._index];
+
+                // Get the last line index and last character position of the last line
+                var $line = this._editor.lineCount() - 1;
+                var $ch   = this._editor.getLine($line).length;
+
+                // Set the code editor cursor position to the last line
+                this._editor.setCursor($line, $ch);
+            }
         }
     },
     // ----- STATIC -----
     {
-        // MOUSE EVENTS
-        'static _group_click': function(e)
+        // EVENTS
+        'static const _group_click':   function(e)
         {
             // If the mouse key is not a left click, return
             if (e.which !== 1)
@@ -965,7 +1134,19 @@
                         // Toggle the slide
                         [$collapsed ? 'slideDown' : 'slideUp']($this.__type.durationGroupSlide);
         },
-        
+        'static const _output_scroll': function(e)
+        {
+            // Get the private instance
+            var $this = e.data;
+
+            // If the console is internally scrolling, return
+            if ($this._scrolling)
+                return;
+
+            // Set the locked flag
+            $this._locked = $$.asInt($this._output.scrollTop(), true) < $$.asInt(Math.max(0, $$.asFloat($this._output.prop('scrollHeight')) - $$.asFloat($this._output.height())), true);
+        },
+
         'static cachePrefix':            '~jT_Console:',
         'static durationGroupSlide':     400,
         'static gridClass':              'console',
@@ -987,6 +1168,8 @@
         'static iconTimer':              $_icon('timer'),
         'static iconTrace':              $_icon('trace'),
         'static iconWarn':               $_icon('warn'),
+        'static primitiveClass':         'primitive',
+        'static primitiveStringClass':   'string',
         'static textAssert':             'Assertion Failed:',
         'static textProfile':            'Profile "{0}" started.',
         'static textProfileEnd':         'Profile "{0}" finished.',

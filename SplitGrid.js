@@ -28,7 +28,7 @@
         // FORMAT $name
         $grid     = $($grid);
         $dock     = $$.asString($dock).toLowerCase();
-        $position = $$.asFloat($position);
+        $position = Math.max(0, $$.asFloat($position, true));
         $name     = $$.asString($name);
 
         // If local storage is supported and a name was provided
@@ -46,7 +46,7 @@
             {
                 // Extract the dock layout and divider position
                 $dock     = $$.asString($cacheDock);
-                $position = $$.asFloat($cachePos) * 100;
+                $position = $$.asFloat($cachePos, true) * 100;
             }
         }
 
@@ -153,6 +153,9 @@
         },
         'virtual refresh': function($divider)
         {
+            // FORMAT $divider
+            $divider = $$.asBool($divider);
+
             // Get the spacing
             var $spacing = this._pos * 100;
 
@@ -247,7 +250,7 @@
             'set': function($v)
             {
                 // FORMAT $v
-                $v = $$.asFloat($v) || 0;
+                $v = Math.max(0, $$.asFloat($v, true));
 
                 // Convert the value from a percentage
                 $v /= 100;
@@ -276,7 +279,7 @@
             'set': function($v)
             {
                 // FORMAT $v
-                $v = $$.asFloat($v) || 0;
+                $v = Math.max(0, $$.asFloat($v, true));
 
                 // Ensure the value is between 1% and 99%
                 $v = Math.max($v, 1);
@@ -311,7 +314,7 @@
             'set': function($v)
             {
                 // FORMAT $v
-                $v = $$.asFloat($v) || 0;
+                $v = Math.max(0, $$.asFloat($v, true));
 
                 // Ensure the value is between 1% and 99%
                 $v = Math.max($v, 1);
@@ -392,7 +395,7 @@
     // ----- STATIC -----
     {
         // MOUSE EVENTS
-        'static _mousedown':    function(e)
+        'static const _mousedown':    function(e)
         {
             // If the mouse key is not a left click, return
             if (e.which !== 1)
@@ -439,7 +442,7 @@
 
             return false;
         },
-        'static _mousemove':    function(e)
+        'static const _mousemove':    function(e)
         {
             // Get the private instance and the drag-state object
             var $this = e.data;
@@ -510,13 +513,13 @@
                     return false;
             }
         },
-        'static _mousetimeout': function()
+        'static const _mousetimeout': function()
         {
             $(window.document)
                 // Trigger the mouse up event handler on the document
                 .triggerHandler('mouseup.' + $this.__type.eventNamespace);
         },
-        'static _mouseup':      function(e)
+        'static const _mouseup':      function(e)
         {
             // Get the private instance and the drag-state object
             var $this = e.data;

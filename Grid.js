@@ -50,8 +50,8 @@
                 else
                     $v = $v.substr(0, $v.length - 1);
 
-                // Cast the value as an integer
-                $v = $$.asInt($v.trim(), true);
+                // Cast the value as a float
+                $v = Math.max(0, $$.asFloat($v.trim(), true));
             }
             // Reset the value
             else
@@ -63,7 +63,7 @@
         else
         {
             // Set the value (greater than or equal to zero)
-            $this['_' + $k]         = $type === 'number' ? Math.max($v, 0) : 0;
+            $this['_' + $k]         = Math.max(0, $$.asFloat($v, true));
             $this['_' + $k + 'IsP'] = false;
         }
     };
