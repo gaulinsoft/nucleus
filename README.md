@@ -6,7 +6,7 @@ The jTypes JavaScript console was built for the upcoming jTypes interactive deve
 
 This console can be quite useful for bloggers or on documentation pages to provide your users with the ability to not just read your code or have it highlighted, but also to actually execute it and experiment with it (when applicable).
 
-*Please note that this console is still a work in progress as well. There are many more features currently in development, such as utilizing the SplitGrid class to inspect objects and arrays that are logged to the console, and much more. Please be sure to check out our social media links at the bottom of the jTypes homepage to follow us so you can be notified of any updates.*
+*Please note that this console is still a work in progress as well. There are many more features currently in development, such as utilizing the SplitGrid class to inspect objects and arrays that are logged to the console, adding methods to gain more control over the code editor, creating filters for the output section, and much more. Please be sure to check out our social media links at the bottom of the jTypes homepage to follow us so you can be notified of any updates.*
 
 ### How does the JavaScript console work?
 
