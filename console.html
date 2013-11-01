@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>jTypes</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script type="text/javascript" src="http://cdn.jtypes.com/jtypes-2.1.7.min.js"></script>
+    
+    <script type="text/javascript" src="js/codemirror.js"></script>
+    <script type="text/javascript" src="js/edit/matchbrackets.js"></script>
+    <script type="text/javascript" src="js/edit/continuecomment.js"></script>
+    <script type="text/javascript" src="js/comment/comment.js"></script>
+    <script type="text/javascript" src="js/mode/javascript.js"></script>
+
+    <script type="text/javascript" src="Grid.js"></script>
+    <script type="text/javascript" src="SplitGrid.js"></script>
+    <script type="text/javascript" src="Console.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="css/codemirror.css" />
+    <style type="text/css">
+        /*
+        // ############ HTML ############
+        */
+
+        html
+        {
+            height: 100%;
+        }
+
+        /*
+        // ############ BODY ############
+        */
+
+        body
+        {
+            height: 100%;
+        }
+
+        /*
+        // ##### ROWS + COLUMNS #####
+        */
+
+        .column
+        {
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            -o-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            display: inline-block;
+            height: 100%;
+            position: relative;
+        }
+
+        .row
+        {
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            -o-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            display: inline-block;
+            width: 100%;
+            position: relative;
+        }
+
+        /*
+        // ############ GRID ############
+        */
+
+        div.console
+        {
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            -o-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            height: 100%;
+            position: relative;
+        }
+
+        div.console > div.C0 > div.R0
+        {
+            background-color: #FCFCFC;
+            border-bottom: 3px solid #E5E5E5;
+            overflow: auto;
+        }
+
+        div.console > div.C0 > div.R1
+        {
+            border-top: 3px solid #E5E5E5;
+            padding-right: 50px;
+        }
+
+        div.console > div.C0 > div.R1 > div
+        {
+            height: 100% !important;
+        }
+
+        div.console > div.C0 > div.R1 > div.controls
+        {
+            background-color: #FAFAFA;
+            border-left: 1px solid #E5E5E5;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            -o-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            position: absolute;
+            right: 0px;
+            top: 0px;
+            width: 50px;
+        }
+
+        div.console > div.C0 > div.R1 > div.controls > a
+        {
+            cursor: pointer;
+            display: inline-block;
+            height: 16px;
+            opacity: 0.5;
+            position: absolute;
+            right: 17px;
+            transition: opacity 0.15s ease-in;
+            -moz-transition: opacity 0.15s ease-in;
+            -ms-transition: opacity 0.15s ease-in;
+            -o-transition: opacity 0.15s ease-in;
+            -webkit-transition: opacity 0.15s ease-in;
+            width: 16px;
+
+            -webkit-backface-visibility: hidden;/* DON'T REMOVE THIS, WEBKIT BUG NEEDS NO 3D BACKFACE VISIBILITY FOR OPACITY TRANSITIONS */
+        }
+
+        div.console > div.C0 > div.R1 > div.controls > a:hover
+        {
+            cursor: pointer !important;
+            opacity: 0.75;
+        }
+
+        div.console > div.C0 > div.R1 > div.controls > a:active
+        {
+            cursor: pointer !important;
+            opacity: 1;
+        }
+
+        div.console > div.C0 > div.R1 > div.controls > a.buttonClear
+        {
+            bottom: 40px;
+        }
+
+        div.console > div.C0 > div.R1 > div.controls > a.buttonEval
+        {
+            bottom: 10px;
+        }
+
+        /*
+        // ############ SEPARATOR ############
+        */
+
+        div.console > div.separator
+        {
+            background-color: #E5E5E5;/* DON'T REMOVE THIS, IE10 BUG NEEDS BACKGROUND FOR POSITION ABSOLUTE */
+            cursor: row-resize;
+            height: 6px;
+            margin-bottom: -3px;
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+            z-index: 5000;
+        }
+
+        div.console > div.separator:hover,
+        div.console > div.separator:active
+        {
+            cursor: row-resize;
+        }
+
+            /*
+            // ------------ DRAG ------------
+            */
+
+            div.console.drag > div.separator
+            {
+                height: 100% !important;
+                left: 0px !important;
+                margin-bottom: 0px;
+                opacity: 0.15;
+                top: 0px !important;
+                z-index: 125000 !important;
+            }
+
+        /*
+        // ############ PARAGRAPH ############
+        */
+
+        div.console p
+        {
+            color: #666666;
+            font-size: 12px;
+            line-height: 13px;
+            min-height: 14px;
+            padding: 7px 0px 7px 30px;
+            position: relative;
+        }
+
+        div.console p:not(.assert):not(.debug):not(.error):not(.info):not(.warn):hover
+        {
+            background-color: #F5F5F5;
+        }
+
+        div.console p > img
+        {
+            cursor: default;
+            height: 14px;
+            left: 7px;
+            margin-top: -7px;
+            opacity: 0.5;
+            position: absolute;
+            top: 14px;
+            user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -o-user-select: none;
+            -webkit-user-select: none;
+            width: 14px;
+            z-index: 25;
+        }
+
+        div.console p > pre
+        {
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            -o-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            display: block;
+            font-family: Consolas, Inconsolata, 'Lucida Console', 'Courier New', monospace, serif;
+            font-size: 13px !important;
+            line-height: 13px !important;
+            padding-right: 7px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+            /*
+            // ------------ NOWRAP ------------
+            */
+
+            div.console.nowrap p > pre
+            {
+                display: inline-block;
+                white-space: pre;
+                word-wrap: normal;
+            }
+
+        div.console p > span.prefix
+        {
+            cursor: default;
+            float: left;
+            font-size: 11px;
+            font-style: italic;
+            margin-right: 6px;
+        }
+
+            /*
+            // ------------ ASSERT/ERROR ------------
+            */
+
+            div.console p.assert,
+            div.console p.error
+            {
+                background-color: #FFDDDD;
+            }
+
+            /*
+            // ------------ DEBUG ------------
+            */
+    
+            div.console p.debug
+            {
+                background-color: #DDFFDD;
+            }
+
+            /*
+            // ------------ EVAL ------------
+            */
+
+            div.console p.eval
+            {
+                opacity: 0.5;
+            }
+
+            /*
+            // ------------ INFO ------------
+            */
+    
+            div.console p.info
+            {
+                background-color: #DDDDFF;
+            }
+
+            /*
+            // ------------ RETURN ------------
+            */
+
+            div.console p.return > img
+            {
+                margin-top: -9px;
+            }
+
+            /*
+            // ------------ TIMER ------------
+            */
+
+            div.console p.timer > img
+            {
+                margin-top: -8px;
+            }
+
+            /*
+            // ------------ UNSUPPORTED ------------
+            */
+
+            div.console p.unsupported
+            {
+                opacity: 0.65;
+            }
+
+            /*
+            // ------------ WARN ------------
+            */
+    
+            div.console p.warn
+            {
+                background-color: #FFFFDD;
+            }
+
+
+
+
+
+
+
+
+
+        .console p > pre.primitive:not(.string)
+        {
+            font-style: italic;
+            opacity: 0.85;
+        }
+
+        .console p > pre > i
+        {
+            font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .console p.dir > img,
+        .console .group > p:first-child > img
+        {
+            height: 10px;
+            left: 9px;
+            margin-top: -5px;
+            width: 10px;
+        }
+
+        .console .group
+        {
+            border: 1px solid #CCCCCC;
+            border-right: none;
+            margin: 6px 0px 6px 24px;
+            user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -o-user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .console .group:not(.closed)
+        {
+            border-bottom-style: dotted;
+        }
+
+        .console .group > div:last-child
+        {
+            overflow: hidden;
+        }
+
+        .console .group > p:first-child
+        {
+            background-color: #EEEEEE !important;
+            cursor: pointer !important;
+            font-weight: bold !important;
+        }
+
+        .console .group > p:first-child:hover
+        {
+            background-color: #DDDDDD !important;
+            cursor: pointer !important;
+        }
+
+        .console .group > p:first-child > img
+        {
+            transition: transform ease-in 0.4s;
+            -ms-transition: -ms-transform ease-in 0.4s;
+            -moz-transition: -moz-transform ease-in 0.4s;
+            -o-transition: -o-transform ease-in 0.4s;
+            -webkit-transition: -webkit-transform ease-in 0.4s;
+        }
+
+        .console .group:not(.collapsed) > p:first-child > img
+        {
+            transform: rotate(90deg);
+            -ms-transform: rotate(90deg);
+            -moz-transform: rotate(90deg);
+            -o-transform: rotate(90deg);
+            -webkit-transform: rotate(90deg);
+        }
+    </style>
+
+    <script type="text/javascript">
+        jQuery(function($)
+        {
+            window.demo = $$.dev.Console(window, $('body'), '100%', '100%', 75, 'demo');
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

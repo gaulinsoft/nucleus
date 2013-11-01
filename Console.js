@@ -23,7 +23,7 @@
     var $_icon  = function($icon)
     {
         // Return the icon path
-        return '/images/develop/icon_console_' + $icon + '.svg';
+        return 'img/' + $icon + '.svg';
     };
     var $_pad   = function($string, $length, $character)
     {
@@ -187,10 +187,10 @@
 
         // ELEMENTS
         '_controls':        $(),
-        '_controlsBack':    $(),
+        //'_controlsBack':    $(),
         '_controlsClear':   $(),
         '_controlsEval':    $(),
-        '_controlsForward': $(),
+        //'_controlsForward': $(),
 
         // FLAGS
         '_dumping':    false,
