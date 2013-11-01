@@ -23,16 +23,16 @@ There are four public methods exposed by the console class, along with a public 
 
 ### console.value
 
-The value property is a string that references the code in the editor of the console. This property is both readable and writable.
+The `value` property is a string that references the code in the editor of the console. This property is both readable and writable.
 
 ### console.evaluate(value)
 
-The evaluate method has two different ways of being called. When no arguments are provided, the code in the editor is evaluated and cleared. However, if an optional value argument is provided, this value will be evaluated instead, and the code inside the editor will not be modified.
+The `evaluate` method has two different ways of being called. When no arguments are provided, the code in the editor is evaluated and cleared. However, if an optional `value` argument is provided, this value will be evaluated instead, and the code inside the editor will not be modified.
 
 ### console.clear(value)
 
-The clear method erases the entire output section of the console, and is equivalent to evalulating `console.clear()`. If the optional value argument is provided, this value will replace the current code in the editor when the output is cleared.
+The `clear` method erases the entire output section of the console, and is equivalent to evalulating `console.clear()`. If the optional `value` argument is provided, this value will replace the current code in the editor when the output is cleared.
 
 ### console.back(steps) + console.forward(steps)
 
-The back and forward methods navigate through the console history. If the optional `name` argument was provided when the console was instantiated, this history will be retained even when the browser is closed. If the optional `steps` argument is provided, the history will be skipped to the respective point in history of the console. If the `steps` argument exceeds the number of available history steps, it will automatically be rounded to the maximum step value.
+The `back` and `forward` methods navigate through the console history. If the optional `steps` argument is provided, the history will be skipped to the respective point in history of the console. If the `steps` argument exceeds the number of available history steps, it will automatically be rounded to the maximum step value. If the optional `name` argument was provided when the console was instantiated, this history will be retained even when the browser is closed.
