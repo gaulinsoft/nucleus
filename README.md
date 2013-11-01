@@ -31,7 +31,7 @@ The `evaluate` method has two different ways of being called. When no arguments 
 
 #### console.clear(value)
 
-The `clear` method erases the entire output section of the console, and is equivalent to evalulating `console.clear()`. If the optional `value` argument is provided, this value will replace the current code in the editor when the output is cleared.
+The `clear` method erases the entire output section of the console, and is equivalent to evaluating `console.clear()`. If the optional `value` argument is provided, this value will replace the current code in the editor when the output is cleared.
 
 #### console.back(steps) + console.forward(steps)
 
