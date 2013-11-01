@@ -6,6 +6,8 @@ The jTypes JavaScript console was built for the upcoming jTypes interactive deve
 
 This console can be quite useful for bloggers or on documentation pages to provide your users with the ability to not just read your code or have it highlighted, but also to actually execute it and experiment with it (when applicable).
 
+*Please note that this console is still a work in progress as well. There are many more features currently in development, such as utilizing the SplitGrid class to inspect objects and arrays that are logged to the console, and much more. Please be sure to check out our social media links at the bottom of the jTypes homepage to follow us so you can be notified of any updates.*
+
 ### How does the JavaScript console work?
 
 The console is instantiated just like any other jTypes class. The first parameter is a reference to the window object that will be wrapped by the console. The second is the jQuery wrapper or DOM element where the console will be inserted. The next two arguments specify the width and height of the console, respectively. These values can be either numbers or strings, and support both percent and pixel values. The next argument is the initial position of the grid slider, which is specified as a percent value of the height. This argument is optional. The final argument is also optional and specifies a unique name for the console. When this value is provided, the console will remember the location of the grid slider and the console history. This information is retained in localStorage and is available even if the browser is closed.
