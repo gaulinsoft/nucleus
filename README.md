@@ -33,6 +33,6 @@ The evaluate method has two different ways of being called. When no arguments ar
 
 The clear method erases the entire output section of the console, and is equivalent to evalulating `console.clear()`. If the optional value argument is provided, this value will replace the current code in the editor when the output is cleared.
 
-## console.back(steps) + console.forward(steps)
+### console.back(steps) + console.forward(steps)
 
 The back and forward methods navigate through the console history. If the optional `name` argument was provided when the console was instantiated, this history will be retained even when the browser is closed. If the optional `steps` argument is provided, the history will be skipped to the respective point in history of the console. If the `steps` argument exceeds the number of available history steps, it will automatically be rounded to the maximum step value.
