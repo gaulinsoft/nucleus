@@ -105,6 +105,45 @@
         this.maximum = this.__type.gridMaximum;
         this.minimum = this.__type.gridMinimum;
 
+        // Create the controls element
+        this._controls = $('<div />')
+            // Add the controls class to the controls wrapper
+            .addClass(this.__type.controlsClass)
+            // Append the controls element to the input element
+            .appendTo(this._input[0]);
+
+        // Create the controls clear button
+        this._controlsClear = $('<a />')
+            // Add the button clear class to the controls clear button
+            .addClass(this.__type.buttonClassClear)
+            // Append the image element to the controls clear button
+            .append
+            (
+                $('<img />')
+                    // Set the image source
+                    .attr('src', this.__type.buttonIconClear)
+            )
+            // Append the controls clear button to the controls element
+            .appendTo(this._controls[0])
+            // Bind the click event handler to the controls clear button
+            .on('click', this.__data, this.__type._controls_clear_click);
+
+        // Create the controls eval button
+        this._controlsEval = $('<a />')
+            // Add the button eval class to the controls eval button
+            .addClass(this.__type.buttonClassEval)
+            // Append the image element to the controls eval button
+            .append
+            (
+                $('<img />')
+                    // Set the image source
+                    .attr('src', this.__type.buttonIconEval)
+            )
+            // Append the controls eval button to the controls element
+            .appendTo(this._controls[0])
+            // Bind the click event handler to the controls eval button
+            .on('click', this.__data, this.__type._controls_eval_click);
+
         // Create the code editor
         this._editor = CodeMirror(this._input[0],
         {
@@ -145,6 +184,13 @@
         '_console': null,
         '_editor':  null,
         '_window':  null,
+
+        // ELEMENTS
+        '_controls':        $(),
+        '_controlsBack':    $(),
+        '_controlsClear':   $(),
+        '_controlsEval':    $(),
+        '_controlsForward': $(),
 
         // FLAGS
         '_dumping':    false,
@@ -223,7 +269,7 @@
                         }
                     }
 
-                    // ##############################
+                    // ########## UNFINISHED ##########
 
                     var $array  = $type === 'array';
                     var $cutoff = false;
@@ -312,7 +358,7 @@
                                 .text($array ? ']' : '}')
                         );
 
-                    // ##############################
+                    // ########## UNFINISHED ##########
 
                     break;
                     
@@ -880,6 +926,8 @@
                     // Append the created dump element of the current argument to the output element
                     .append(this.dump($argument));
 
+                // ########## UNFINISHED ##########
+
                 // If the console is throwing an exception and the current argument is an error
                 if (this._throwing && $type === 'error')
                 {
@@ -890,6 +938,8 @@
                 {
                     // SHOW KEY-VALUE DUMPS (AS PLUS SIGN WITH SLIDEDOWN)
                 }
+
+                // ########## UNFINISHED ##########
             }
             
             // If any groups exist
@@ -1113,7 +1163,31 @@
     // ----- STATIC -----
     {
         // EVENTS
-        'static const _group_click':   function(e)
+        'static const _controls_clear_click': function(e)
+        {
+            // If the mouse key is not a left click, return
+            if (e.which !== 1)
+                return;
+
+            // Get the private instance
+            var $this = e.data;
+
+            // Clear the console value
+            $this.value = '';
+        },
+        'static const _controls_eval_click':  function(e)
+        {
+            // If the mouse key is not a left click, return
+            if (e.which !== 1)
+                return;
+
+            // Get the private instance
+            var $this = e.data;
+
+            // Evaluate the console
+            $this.evaluate();
+        },
+        'static const _group_click':          function(e)
         {
             // If the mouse key is not a left click, return
             if (e.which !== 1)
@@ -1134,7 +1208,7 @@
                         // Toggle the slide
                         [$collapsed ? 'slideDown' : 'slideUp']($this.__type.durationGroupSlide);
         },
-        'static const _output_scroll': function(e)
+        'static const _output_scroll':        function(e)
         {
             // Get the private instance
             var $this = e.data;
@@ -1146,8 +1220,13 @@
             // Set the locked flag
             $this._locked = $$.asInt($this._output.scrollTop(), true) < $$.asInt(Math.max(0, $$.asFloat($this._output.prop('scrollHeight')) - $$.asFloat($this._output.height())), true);
         },
-
+        
+        'static buttonClassClear':       'buttonClear',
+        'static buttonIconClear':        $_icon('clear'),
+        'static buttonClassEval':        'buttonEval',
+        'static buttonIconEval':         $_icon('dir'),
         'static cachePrefix':            '~jT_Console:',
+        'static controlsClass':          'controls',
         'static durationGroupSlide':     400,
         'static gridClass':              'console',
         'static gridMaximum':            90,
