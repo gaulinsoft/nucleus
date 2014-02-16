@@ -242,8 +242,8 @@
                 case 'object':
                 case 'window':
 
-                    // Get the casting function (from the window context)
-                    var $cast = $type !== 'class' && $type !== 'instance' ? this._window[$global].prototype.toString : null;
+                    // Create the casting function reference
+                    var $cast = null;
                     
                     // If the object is a class, set the casting function to the default class "toString()" method
                     if ($type === 'class')
@@ -251,21 +251,39 @@
                     // If the object is an instance, set the casting function to the default instance "toString()" method
                     else if ($type === 'instance')
                         $cast = this._window.jTypes ? this._window.jTypes.__proto.toString : $$.__proto.toString;
+                    // Get the casting function (from the window context)
+                    else
+                        $cast = this._window[$global].prototype.toString;
 
                     // If the object has a self "toString()" function and it is not the casting function
                     if ($$.isFunction($object.toString) && $object.toString !== $cast)
                     {
-                        // Get the object text
-                        var $text = $object.toString();
-
-                        // If the object text is a string and it is not a generic object string
-                        if ($$.isString($text) && !$text.match(/^\[(object)\s[_\$a-zA-Z]+[_\$a-zA-Z0-9]*\]$/))
+                        try
                         {
-                            $code
-                                // Set the code element text to the object text
-                                .text(' ' + $text);
+                            // Try to get the object text
+                            var $text = $object.toString();
 
-                            break;
+                            // If the object text is a string
+                            if ($$.isString($text))
+                            {
+                                // If the object text is not a string primitive, convert it to a string
+                                if (typeof $text != 'string')
+                                    $text = $$.asString($text);
+
+                                // If the object text is not a generic object string
+                                if (!$text.match(/^\[(object)\s[_\$a-zA-Z]+[_\$a-zA-Z0-9]*\]$/))
+                                {
+                                    $code
+                                        // Set the code element text to the object text
+                                        .text(' ' + $text);
+
+                                    break;
+                                }
+                            }
+                        }
+                        catch (e)
+                        {
+                            //
                         }
                     }
                     
@@ -558,14 +576,37 @@
 
                 case 'function':
 
-                    // Get the casting function (from the window context), check if the object has a self "toString()" function, and get the object text
+                    // Get the casting function (from the window context) and check if the object has a self "toString()" function
                     var $cast = this._window[$global].prototype.toString;
                     var $self = $$.isFunction($object.toString);
-                    var $text = $self ? $object.toString() : $cast.call($object);
+                    var $text = null;
+
+                    // If a self "toString()" function was found
+                    if ($self)
+                    {
+                        try
+                        {
+                            // Try to get the object text
+                            $text = $object.toString();
+                        }
+                        catch (e)
+                        {
+                            // Reset the self "toString()" check
+                            $self = false;
+                        }
+                    }
+                    
+                    // If no self "toString()" function was found, get the object text
+                    if (!$self)
+                        $text = $cast.call($object);
 
                     // If the object text is not a string, break
                     if (!$$.isString($text))
                         break;
+
+                    // If the object text is not a string primitive, convert it to a string
+                    if (typeof $text != 'string')
+                        $text = $$.asString($text);
                     
                     // If no self "toString()" function was found or it was the casting function
                     if (!$self || $object.toString === $cast)
