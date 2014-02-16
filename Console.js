@@ -268,97 +268,197 @@
                             break;
                         }
                     }
-
-                    // ########## UNFINISHED ##########
-
+                    
+                    // Check if the object is an array and create the cutoff flag along with the index and length
                     var $array  = $type === 'array';
                     var $cutoff = false;
                     var $index  = 0;
                     var $length = 0;
-                    var $substr = false;
 
                     $code
+                        // Append the opening brace to the code
                         .append
                         (
                             $('<span />')
+                                // Use an opening bracket for arrays and an opening brace for objects
                                 .text($array ? ' [' : ' {')
                         );
 
                     for (var $key in $object)
                     {
-                        // If the object is an array and the current key is not the current array index, continue
-                        if ($array && $key != $index)
-                            continue;
-                        
-                        var $text  = null;
-                        var $value = $object[$key];
-
-                        var $textKey       = JSON.stringify($key);
-                        var $textPrimitive = $$.isPrimitive($value);
-                        var $textType      = this._window.jTypes ? this._window.jTypes.type($value) : $$.type($value);
-
-                        if ($textPrimitive)
-                            $text = $textType === 'string' ? JSON.stringify($value) : $value + '';
-                        else if ($textType === 'regexp')
-                            $text = 'RegExp';
-                        else
-                            $text = $textType[0].toUpperCase() + $textType.substr(1);
-
-                        if ($length !== 0)
+                        // If the current key is not the first key in the object
+                        if ($length > 0)
                         {
+                            // If the cutoff flag is set and it's from a key cutoff
+                            if ($cutoff && $cutoff !== $index)
+                                $code
+                                    // Append ellipsis to the code
+                                    .append
+                                    (
+                                        $('<i />')
+                                            .text(' ... ')
+                                    );
+
                             $code
+                                // Append the comma separator to the code
                                 .append
                                 (
                                     $('<span />')
                                         .text(', ')
                                 );
 
-                            $length += 2;
+                            // If the cutoff flag is set or the dump limit has been reached
+                            if ($cutoff || $length >= this.__type.dumpLimit)
+                            {
+                                // Ensure the cutoff flag appends ellipsis since there are more properties
+                                $cutoff = true;
+
+                                break;
+                            }
                         }
 
-                        // TRIM KEY
+                        // If the object is an array and the current key is not the current array index, continue
+                        if ($array && $key != $index)
+                            continue;
+                        
+                        // Create the text representation of the value and get the current value
+                        var $text  = null;
+                        var $value = $object[$key];
 
+                        // Create the JSON string of the key, check if the value is a primitive value, and get the type of the value
+                        var $textKey       = JSON.stringify($key);
+                        var $textPrimitive = $$.isPrimitive($value);
+                        var $textType      = this._window.jTypes ? this._window.jTypes.type($value) : $$.type($value);
+
+                        // If the value is a primitive value, use the JSON-like string of the value (because undefined is not supported) as the text representation of the value
+                        if ($textPrimitive)
+                            $text = $textType === 'string' ? JSON.stringify($$.asString($value)) : $value + '';
+                        // If the value is a regular expression, use the special "RegExp" type string as the text representation of the value
+                        else if ($textType === 'regexp')
+                            $text = 'RegExp';
+                        // Use the type string as the text representation of the value
+                        else
+                            $text = $textType[0].toUpperCase() + $textType.substr(1);
+                        
+                        // If the object is not an array
                         if (!$array)
+                        {
+                            // Add the length of the key to the length
+                            $length += $textKey.length;
+
+                            // If the length exceeded the dump limit
+                            if ($length > this.__type.dumpLimit)
+                            {
+                                // Set the cutoff flag
+                                $cutoff = true;
+
+                                // Trim the key within the dump limit
+                                $textKey = $textKey.substr(0, $textKey.length - $length + this.__type.dumpLimit);
+                            }
+
                             $code
+                                // Append the key to the code
                                 .append
                                 (
                                     $('<span />')
-                                        .text($textKey + ': ')
+                                        .text($textKey)
                                 );
 
-                        // TRIM VALUE (ONLY IF IT IS A STRING PRIMITIVE)
+                            // If the cutoff flag is set
+                            if ($cutoff)
+                                $code
+                                    // Append ellipsis to the code
+                                    .append
+                                    (
+                                        $('<i />')
+                                            .text('...')
+                                    )
+                                    // Append the closing JSON quote to the code
+                                    .append
+                                    (
+                                        $('<span />')
+                                            .text('"')
+                                    );
+
+                            $code
+                                // Append the key-value colon separator to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text(': ')
+                                );
+
+                            // If the cutoff flag is set, continue
+                            if ($cutoff)
+                                continue;
+                        }
+
+                        // Add the length of the text representation of the value to the length
+                        $length += $text.length;
+
+                        // If the value is a string and the length exceeded the dump limit
+                        if ($textType === 'string' && $length > this.__type.dumpLimit)
+                        {
+                            // Set the cutoff flag
+                            $cutoff = true;
+
+                            // Trim the text representation of the value within the dump limit
+                            $text = $text.substr(0, $text.length - $length + this.__type.dumpLimit);
+                        }
 
                         $code
+                            // Append the text representation of the value to the code
                             .append
                             (
+                                // If the value is not primitive, italicise it
                                 $($textPrimitive ? '<span />' : '<i />')
                                     .text($text)
                             );
 
-                        $length += $textKey.length;
-                        $length += $text.length;
+                        // If the cutoff flag is set
+                        if ($cutoff)
+                        {
+                            $code
+                                // Append ellipsis to the code
+                                .append
+                                (
+                                    $('<i />')
+                                        .text('...')
+                                )
+                                // Append the closing JSON quote to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text('"')
+                                );
+                        }
 
-                        // SET CUTOFF FLAG
-
+                        // Increment the index count
                         $index++;
+
+                        // If the cutoff flag is set, ensure its treated as a value cutoff
+                        if ($cutoff)
+                            $cutoff = $index;
                     }
 
-                    if ($cutoff)
+                    // If the cutoff flag is set and it is not a value cutoff
+                    if ($cutoff && $cutoff !== $index)
                         $code
+                            // Append ellipsis to the code
                             .append
                             (
                                 $('<i />')
-                                    .text(($substr ? '' : ' ') + '... ')
+                                    .text(' ... ')
                             );
                     
                     $code
+                        // Append the closing brace to the code
                         .append
                         (
                             $('<span />')
+                                // Use a closing bracket for arrays and a closing brace for objects
                                 .text($array ? ']' : '}')
                         );
-
-                    // ########## UNFINISHED ##########
 
                     break;
                     
@@ -873,6 +973,17 @@
         },
         'virtual keyup':   $$.empty(),
 
+        // REFRESH
+        'override refresh': function()
+        {
+            // Call the base refresh
+            this.__base.refresh.apply(this, arguments);
+
+            // Refresh the editor
+            if (this._editor)
+                this._editor.refresh();
+        },
+
         // WRITE
         'write': function($class, $icon, $title, $arguments, $index)
         {
@@ -1227,6 +1338,7 @@
         'static buttonIconEval':         $_icon('dir'),
         'static cachePrefix':            '~jT_Console:',
         'static controlsClass':          'controls',
+        'static dumpLimit':              75,
         'static durationGroupSlide':     400,
         'static gridClass':              'console',
         'static gridMaximum':            90,
