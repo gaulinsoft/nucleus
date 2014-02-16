@@ -289,7 +289,7 @@
                         // If the current key is not the first key in the object
                         if ($length > 0)
                         {
-                            // If the cutoff flag is set and it's from a key cutoff
+                            // If the cutoff flag is set and it is a key cutoff
                             if ($cutoff && $cutoff !== $index)
                                 $code
                                     // Append ellipsis to the code
@@ -311,7 +311,7 @@
                             if ($cutoff || $length >= this.__type.dumpLimit)
                             {
                                 // Ensure the cutoff flag appends ellipsis since there are more properties
-                                $cutoff = true;
+                                $cutoff = $index + 1;
 
                                 break;
                             }
@@ -319,7 +319,47 @@
 
                         // If the object is an array and the current key is not the current array index, continue
                         if ($array && $key != $index)
-                            continue;
+                        {
+                            // If the key is non-numeric, break
+                            if (!/^[0-9]+$/.test($key))
+                                break;
+
+                            // Temporarily convert the key to an integer
+                            $key = parseInt($key);
+
+                            // If the key is less than the index (for some unknown reason), break
+                            if ($key < $index)
+                                break;
+
+                            // Create the undefined text counter
+                            var $textUndefined = 'undefined x ' + ($key - $index);
+
+                            $code
+                                // Append the undefined text counter to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text($textUndefined)
+                                );
+                            
+                            $code
+                                // Append the comma separator to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text(', ')
+                                );
+
+                            // Add the undefined text counter length to the length
+                            $length += $textUndefined.length;
+
+                            // Set the new index and convert the key back to a string
+                            $index = $key;
+                            $key   = $key.toString();
+                        }
+
+                        // Increment the index count
+                        $index++;
                         
                         // Create the text representation of the value and get the current value
                         var $text  = null;
@@ -339,7 +379,7 @@
                         // Use the type string as the text representation of the value
                         else
                             $text = $textType[0].toUpperCase() + $textType.substr(1);
-                        
+
                         // If the object is not an array
                         if (!$array)
                         {
@@ -400,7 +440,7 @@
                         if ($textType === 'string' && $length > this.__type.dumpLimit)
                         {
                             // Set the cutoff flag
-                            $cutoff = true;
+                            $cutoff = $index;
 
                             // Trim the text representation of the value within the dump limit
                             $text = $text.substr(0, $text.length - $length + this.__type.dumpLimit);
@@ -432,13 +472,6 @@
                                         .text('"')
                                 );
                         }
-
-                        // Increment the index count
-                        $index++;
-
-                        // If the cutoff flag is set, ensure its treated as a value cutoff
-                        if ($cutoff)
-                            $cutoff = $index;
                     }
 
                     // If the cutoff flag is set and it is not a value cutoff
@@ -450,6 +483,37 @@
                                 $('<i />')
                                     .text(' ... ')
                             );
+                    // If the object is an array and there are still indices remaining to be dumped
+                    else if ($array && $index < $object.length)
+                    {
+                        // If the current key is not the first key in the object
+                        if ($length > 0)
+                            $code
+                                // Append the comma separator to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text(', ')
+                                );
+
+                        // If the cutoff flag is not set
+                        if (!$cutoff)
+                            $code
+                                // Append the undefined counter to the code
+                                .append
+                                (
+                                    $('<span />')
+                                        .text('undefined x ' + ($object.length - $index))
+                                );
+                        else
+                            $code
+                                // Append ellipsis to the code
+                                .append
+                                (
+                                    $('<i />')
+                                        .text(' ... ')
+                                );
+                    }
                     
                     $code
                         // Append the closing brace to the code
