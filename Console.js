@@ -325,6 +325,9 @@
                                         .text(', ')
                                 );
 
+                            // Add the comma separator to the length
+                            $length += 2;
+
                             // If the cutoff flag is set or the dump limit has been reached
                             if ($cutoff || $length >= this.__type.dumpLimit)
                             {
@@ -369,7 +372,16 @@
                                 );
 
                             // Add the undefined text counter length to the length
-                            $length += $textUndefined.length;
+                            $length += $textUndefined.length + 2;
+
+                            // If the dump limit has been reached
+                            if ($length >= this.__type.dumpLimit)
+                            {
+                                // Ensure the cutoff flag appends ellipsis since there are more properties
+                                $cutoff = $key;
+
+                                break;
+                            }
 
                             // Set the new index and convert the key back to a string
                             $index = $key;
