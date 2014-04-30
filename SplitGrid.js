@@ -19,8 +19,12 @@
 /// <reference path="Grid.js" />
 (function(window, $, $$, undefined)
 {
+    // If the SplitGrid class is already defined, return
+    if ($$.SplitGrid)
+        return;
+
     // Create the split grid class
-    $$.dev.SplitGrid = $$.dev.SplitGrid || $$($$.dev.Grid, function($grid, $dock, $width, $height, $position, $name)
+    $$('SplitGrid : Grid', function($grid, $dock, $width, $height, $position, $name)
     {
         // FORMAT $grid
         // FORMAT $dock
