@@ -18,8 +18,9 @@
 */
 (function(window, $, $$, undefined)
 {
-    // Create the development environment
-    $$.dev = $$.asObject($$.dev);
+    // If the Grid class is already defined, return
+    if ($$.Grid)
+        return;
 
     // Create the set helper function
     var $_set = function($this, $k, $v)
@@ -69,7 +70,7 @@
     };
 
     // Create the grid class
-    $$.dev.Grid = $$.dev.Grid || $$('abstract', function($rows, $columns, $width, $height)
+    $$('abstract Grid', function($rows, $columns, $width, $height)
     {
         // FORMAT $rows
         // FORMAT $columns
@@ -138,7 +139,7 @@
     // ----- PUBLIC -----
     {
         // WIDTH/HEIGHT ACCESSORS
-        'abstract height':
+        'virtual height':
         {
             'get': function()
             {
@@ -155,7 +156,7 @@
                 $_set(this, 'h', $v);
             }
         },
-        'abstract width':
+        'virtual width':
         {
             'get': function()
             {
