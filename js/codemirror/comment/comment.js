@@ -1,8 +1,12 @@
-(function() {
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
   "use strict";
-
-  if ($$.dev)
-      return;
 
   var noOptions = {};
   var nonWS = /[^\s\u00a0]/;
@@ -14,13 +18,26 @@
   }
 
   CodeMirror.commands.toggleComment = function(cm) {
-    var from = cm.getCursor("start"), to = cm.getCursor("end");
-    cm.uncomment(from, to) || cm.lineComment(from, to);
+    var minLine = Infinity, ranges = cm.listSelections(), mode = null;
+    for (var i = ranges.length - 1; i >= 0; i--) {
+      var from = ranges[i].from(), to = ranges[i].to();
+      if (from.line >= minLine) continue;
+      if (to.line >= minLine) to = Pos(minLine, 0);
+      minLine = from.line;
+      if (mode == null) {
+        if (cm.uncomment(from, to)) mode = "un";
+        else { cm.lineComment(from, to); mode = "line"; }
+      } else if (mode == "un") {
+        cm.uncomment(from, to);
+      } else {
+        cm.lineComment(from, to);
+      }
+    }
   };
 
   CodeMirror.defineExtension("lineComment", function(from, to, options) {
     if (!options) options = noOptions;
-    var self = this, mode = CodeMirror.innerMode(self.getMode(), self.getTokenAt(from).state).mode;
+    var self = this, mode = self.getModeAt(from);
     var commentString = options.lineComment || mode.lineComment;
     if (!commentString) {
       if (options.blockCommentStart || mode.blockCommentStart) {
@@ -55,7 +72,7 @@
 
   CodeMirror.defineExtension("blockComment", function(from, to, options) {
     if (!options) options = noOptions;
-    var self = this, mode = CodeMirror.innerMode(self.getMode(), self.getTokenAt(from).state).mode;
+    var self = this, mode = self.getModeAt(from);
     var startString = options.blockCommentStart || mode.blockCommentStart;
     var endString = options.blockCommentEnd || mode.blockCommentEnd;
     if (!startString || !endString) {
@@ -88,7 +105,7 @@
 
   CodeMirror.defineExtension("uncomment", function(from, to, options) {
     if (!options) options = noOptions;
-    var self = this, mode = CodeMirror.innerMode(self.getMode(), self.getTokenAt(from).state).mode;
+    var self = this, mode = self.getModeAt(from);
     var end = Math.min(to.line, self.lastLine()), start = Math.min(from.line, end);
 
     // Try finding line comments
@@ -99,8 +116,9 @@
       for (var i = start; i <= end; ++i) {
         var line = self.getLine(i);
         var found = line.indexOf(lineString);
+        if (found > -1 && !/comment/.test(self.getTokenTypeAt(Pos(i, found + 1)))) found = -1;
         if (found == -1 && (i != end || i == start) && nonWS.test(line)) break lineComment;
-        if (i != start && found > -1 && nonWS.test(line.slice(0, found))) break lineComment;
+        if (found > -1 && nonWS.test(line.slice(0, found))) break lineComment;
         lines.push(line);
       }
       self.operation(function() {
@@ -127,7 +145,10 @@
       endLine = self.getLine(--end);
       close = endLine.lastIndexOf(endString);
     }
-    if (open == -1 || close == -1) return false;
+    if (open == -1 || close == -1 ||
+        !/comment/.test(self.getTokenTypeAt(Pos(start, open + 1))) ||
+        !/comment/.test(self.getTokenTypeAt(Pos(end, close + 1))))
+      return false;
 
     self.operation(function() {
       self.replaceRange("", Pos(end, close - (pad && endLine.slice(close - pad.length, close) == pad ? pad.length : 0)),
@@ -145,4 +166,4 @@
     });
     return true;
   });
-})();
+});
