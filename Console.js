@@ -576,6 +576,10 @@
 
                     for (var $key in $object)
                     {
+                        // If the object is an array and the current key is non-numeric, break
+                        if ($array && $key != $index && !/^[0-9]+$/.test($key))
+                            break;
+
                         // If the current key is not the first key in the object
                         if ($length > 0)
                         {
@@ -613,10 +617,6 @@
                         // If the object is an array and the current key is not the current array index, continue
                         if ($array && $key != $index)
                         {
-                            // If the key is non-numeric, break
-                            if (!/^[0-9]+$/.test($key))
-                                break;
-
                             // Temporarily convert the key to an integer
                             $key = parseInt($key);
 
