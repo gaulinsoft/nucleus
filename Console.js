@@ -19,11 +19,16 @@
 /// <reference path="SplitGrid.js" />
 (function(window, $, $$, undefined)
 {
+    // If the Console class is already defined, return
+    if ($$.Console)
+        return;
+    
     // Create the helper functions
+    var $_url   = 'img/';
     var $_icon  = function($icon)
     {
         // Return the icon path
-        return 'img/' + $icon + '.svg';
+        return $_url + $icon + '.svg';
     };
     var $_pad   = function($string, $length, $character)
     {
@@ -55,7 +60,7 @@
     };
 
     // Create the console class
-    $$.dev.Console = $$.dev.Console || $$($$.dev.SplitGrid, function($window, $parent, $width, $height, $position, $name)
+    $$('Console : SplitGrid', function($window, $parent, $width, $height, $position, $name)
     {
         // FORMAT $window
         // FORMAT $parent
@@ -145,44 +150,310 @@
             .on('click', this.__data, this.__type._controls_eval_click);
 
         // Create the code editor
-        this._editor = CodeMirror(this._input[0],
+        this._server = new CodeMirror.TernServer({defs: CodeMirror.TernServer._defs || [], plugins: {} });
+        this._editor = new CodeMirror(this._input[0],
         {
-            lineNumbers:   false,
             indentUnit:    4,
-            matchBrackets: true
+            lineNumbers:   false,
+            matchBrackets: true,
+            mode:          'javascript',
+            extraKeys:
+            {
+                'Ctrl-.': this._extraKeyCtrlDot.bind(this.__data),
+                'Alt-.':  this._extraKeyAltDot.bind(this.__data),
+                'Alt-,':  this._extraKeyAltComma.bind(this.__data),
+                
+                '.':  this._extraKeyDot.bind(this.__data)
+            }
         });
 
-        // Bind the keydown and keyup event handlers to the code editor
-        this._editor.on('keydown', this._keydown);
-        this._editor.on('keyup', this._keyup);
+        // Bind the event handlers to the code editor
+        this._editor.on('cursorActivity', this._cursorActivity.bind(this.__data));
+        this._editor.on('keydown',        this._keydown.bind(this.__data));
+        this._editor.on('keyup',          this._keyup.bind(this.__data));
 
-        // Set the console wrapper in the window
-        $window.console = (
+        // Create the console wrapper
+        var $this    = this.__data,
+            $wrapper = $window.console = Object.create($window.console);
+
+        // Set the console method wrappers in the console wrapper
+        $wrapper['assert']         = function($expression)
         {
-            assert:         this.$assert,
-            clear:          this.$clear,
-            debug:          this.$debug,
-            dir:            this.$dir,
-            error:          this.$error,
-            group:          this.$group,
-            groupCollapsed: this.$groupCollapsed,
-            groupEnd:       this.$groupEnd,
-            info:           this.$info,
-            log:            this.$log,
-            profile:        this.$profile,
-            profileEnd:     this.$profileEnd,
-            time:           this.$time,
-            timeEnd:        this.$timeEnd,
-            timeStamp:      this.$timeStamp,
-            trace:          this.$trace,
-            warn:           this.$warn
-        });
+            // FORMAT $expression
+            $expression = $$.asBool($expression);
+
+            // If the expression is true, return
+            if ($expression)
+                return;
+
+            // Write the assert output
+            $this.write($this.__type.writeAssertClass, $this.__type.iconAssert, $this.__type.textAssert, arguments, 1);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.assert))
+                return $this._console.assert.apply($this._console, arguments);
+        };
+        $wrapper['clear']          = function()
+        {
+            // Clear the console
+            $this.clear();
+
+            // Call the native console function
+            if ($$.isFunction($this._console.clear))
+                return $this._console.clear.apply($this._console, arguments);
+        };
+        $wrapper['debug']          = function()
+        {
+            // Write the debug output
+            $this.write($this.__type.writeDebugClass, $this.__type.iconDebug, null, arguments, 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.debug))
+                return $this._console.debug.apply($this._console, arguments);
+        };
+        $wrapper['dir']            = function()
+        {
+            // Set the dumping flag
+            $this._dumping = true;
+
+            // Write the dir output
+            $this.write($this.__type.writeDirClass, null, null, arguments, 0);
+
+            // Reset the dumping flag
+            $this._dumping = false;
+
+            // Call the native console function
+            if ($$.isFunction($this._console.dir))
+                return $this._console.dir.apply($this._console, arguments);
+        };
+        $wrapper['error']          = function()
+        {
+            // Write the error output
+            $this.write($this.__type.writeErrorClass, $this.__type.iconError, null, arguments, 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.error))
+                return $this._console.error.apply($this._console, arguments);
+        };
+        $wrapper['group']          = function($name)
+        {
+            // Push the group into the console
+            $this.groupPush($name, false);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.group))
+                return $this._console.group.apply($this._console, arguments);
+        };
+        $wrapper['groupCollapsed'] = function($name)
+        {
+            // Push the collapsed group into the console
+            $this.groupPush($name, true);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.groupCollapsed))
+                return $this._console.groupCollapsed.apply($this._console, arguments);
+        };
+        $wrapper['groupEnd']       = function()
+        {
+            // Pop the current group from the console
+            $this.groupPop();
+
+            // Call the native console function
+            if ($$.isFunction($this._console.groupEnd))
+                return $this._console.groupEnd.apply($this._console, arguments);
+        };
+        $wrapper['info']           = function()
+        {
+            // Write the info output
+            $this.write($this.__type.writeInfoClass, $this.__type.iconInfo, null, arguments, 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.info))
+                return $this._console.info.apply($this._console, arguments);
+        };
+        $wrapper['log']            = function()
+        {
+            // If the trace function is being called
+            if ($this._tracing)
+            {
+                // Write the trace output
+                $this.write($this.__type.writeTraceClass, $this.__type.iconTrace, null, [$_stack($$.asString(arguments[0]), $this._evaluating)], 0);
+
+                // Reset the tracing flag
+                $this._tracing = false;
+            }
+            // Write the log output
+            else
+                $this.write($this.__type.writeLogClass, null, null, arguments, 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.log))
+                return $this._console.log.apply($this._console, arguments);
+        };
+        $wrapper['profile']        = function($name)
+        {
+            // FORMAT $name
+            $name = $$.asString($name);
+
+            // If a native console function is found
+            if ($$.isFunction($this._console.profile))
+            {
+                // Set the profile flag in the profiles lookup
+                $this._profiles[$name] = true;
+
+                // Write the profile output
+                $this.write($this.__type.writeProfileClass, $this.__type.iconProfile, $$.format($this.__type.textProfile, $name), [], 0);
+
+                // Call the native console function
+                return $this._console.profile.apply($this._console, arguments);
+            }
+            // Write the unsupported profile output
+            else
+                $this.write($this.__type.writeProfileClass + ' ' + $this.__type.unsupportedClass, $this.__type.iconProfile, $this.__type.textProfileUnsupported, [], 0);
+        };
+        $wrapper['profileEnd']     = function($name)
+        {
+            // FORMAT $name
+            $name = $$.asString($name);
+
+            // If a native console function is found
+            if ($$.isFunction($this._console.profileEnd))
+            {
+                // If a profile flag was set in the profiles lookup, write the profile output
+                if ($this._profiles[$name])
+                    $this.write($this.__type.writeProfileEndClass, $this.__type.iconProfile, $$.format($this.__type.textProfileEnd, $name), [], 0);
+
+                // Reset the profile flag in the profiles lookup
+                $this._profiles[$name] = false;
+
+                // Call the native console function
+                return $this._console.profileEnd.apply($this._console, arguments);
+            }
+        };
+        $wrapper['time']           = function($name)
+        {
+            // FORMAT $name
+            $name = $$.asString($name);
+
+            // If any arguments were provided and a timer was not already set
+            if (arguments.length && !$$.isFinite($this._timers[$name]))
+            {
+                // Set the timer ticks
+                $this._timers[$name] = Date.now();
+
+                // Write the time output
+                $this.write($this.__type.writeTimeClass, $this.__type.iconTime, $this.__type.textTime, [$name], 0);
+            }
+
+            // Call the native console function
+            if ($$.isFunction($this._console.time))
+                return $this._console.time.apply($this._console, arguments);
+        };
+        $wrapper['timeEnd']        = function($name)
+        {
+            // FORMAT $name
+            $name = $$.asString($name);
+
+            // If any arguments were provided
+            if (arguments.length)
+            {
+                // Get the timer ticks
+                var $timestamp = $this._timers[$name];
+
+                // If the timer ticks were set
+                if ($$.isFinite($timestamp))
+                {
+                    // Write the time output
+                    $this.write($this.__type.writeTimeEndClass, $this.__type.iconTime, $this.__type.textTimeEnd, [$name], 0);
+
+                    // Write the timer output
+                    $this.write($this.__type.writeTimerClass, $this.__type.iconTimer, $$.format($this.__type.textTimer, Date.now() - $timestamp), [], 0);
+
+                    // Reset the timer
+                    $this._timers[$name] = null;
+                }
+            }
+
+            // Call the native console function
+            if ($$.isFunction($this._console.timeEnd))
+                return $this._console.timeEnd.apply($this._console, arguments);
+        };
+        $wrapper['timeStamp']      = function()
+        {
+            // Get the current date and time
+            var $date = new Date();
+
+            // Get the hours, minutes, seconds, and milliseconds from the date
+            var $hours        = $_pad($date.getHours(), 2);
+            var $minutes      = $_pad($date.getMinutes(), 2);
+            var $seconds      = $_pad($date.getSeconds(), 2);
+            var $milliseconds = $_pad($date.getMilliseconds(), 3);
+
+            // Write the timestamp output
+            $this.write($this.__type.writeTimeStampClass, $this.__type.iconTime, $hours + ':' + $minutes + ':' + $seconds + '.' + $milliseconds, [], 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.timeStamp))
+                return $this._console.timeStamp.apply($this._console, arguments);
+        };
+        $wrapper['trace']          = function()
+        {
+            // Create an error and get the stack trace
+            var $error  = new Error();
+            var $stack  = $$.asString($error.stack);
+            var $return = undefined;
+
+            // Set the tracing flag
+            $this._tracing = true;
+
+            // Call the native console function
+            if ($$.isFunction($this._console.trace))
+                $return = $this._console.trace.apply($this._console, arguments);
+
+            // If no stack trace was found and a trace log was not intercepted
+            if (!$stack && $this._tracing)
+            {
+                try
+                {
+                    // Throw an error
+                    undefined();
+                }
+                catch(e)
+                {
+                    // Get the stack trace
+                    $stack = $$.asString(e.stack);
+                }
+            }
+
+            // If a stack trace was found, write the trace output
+            if ($stack)
+                $this.write($this.__type.writeTraceClass, $this.__type.iconTrace, null, [$_stack($stack, $this._evaluating)], 0);
+            // If a trace log was not intercepted, write the unsupported trace output
+            else if ($this._tracing)
+                $this.write($this.__type.writeTraceClass + ' ' + $this.__type.unsupportedClass, $this.__type.iconTrace, $this.__type.textTraceUnsupported, [], 0);
+
+            // Reset the tracing flag
+            $this._tracing = false;
+
+            // Return the native console function return value
+            return $return;
+        };
+        $wrapper['warn']           = function()
+        {
+            // Write the warn output
+            $this.write($this.__type.writeWarnClass, $this.__type.iconWarn, null, arguments, 0);
+
+            // Call the native console function
+            if ($$.isFunction($this._console.warn))
+                return $this._console.warn.apply($this._console, arguments);
+        };
     },
     // ----- PRIVATE -----
     {
         // REFERENCES
         '_console': null,
         '_editor':  null,
+        '_server':  null,
         '_window':  null,
 
         // ELEMENTS
@@ -191,6 +462,7 @@
         '_controlsClear':   $(),
         '_controlsEval':    $(),
         //'_controlsForward': $(),
+        '_hints':           $(),
 
         // FLAGS
         '_dumping':    false,
@@ -628,7 +900,7 @@
                         
                         // If the function does not have a name, set the function as anonymous
                         if ($text[0] === '(')
-                            $text = '<anonymous>' + $text;
+                            $text = 'function' + $text;
                     }
 
                     $code
@@ -670,294 +942,69 @@
             this._scrolling = false;
         },
 
-        // KEYDOWN/KEYUP
-        '_keydown': function(editor, e)
+        // EVENTS
+        '_keydown': function(cm, e)
         {
+            // If the code editor is showing hints, return
+            if (this._hints && this._hints.is(':visible'))
+                return;
+
             // Fix the event argument
             e = $.event.fix(e);
 
             // Call the keydown method
             this.keydown(e);
         },
-        '_keyup':   function(editor, e)
+        '_keyup':   function(cm, e)
         {
+            // If the code editor is showing hints, return
+            if (this._hints && this._hints.is(':visible'))
+                return;
+
             // Fix the event argument
             e = $.event.fix(e);
 
             // Call the keyup method
             this.keyup(e);
         },
-
-        // WRAPPERS
-        '$assert':         function($expression)
+        
+        '_extraKeyAltComma': function(cm)
         {
-            // FORMAT $expression
-            $expression = $$.asBool($expression);
-
-            // If the expression is true, return
-            if ($expression)
-                return;
-
-            // Write the assert output
-            this.write(this.__type.writeAssertClass, this.__type.iconAssert, this.__type.textAssert, arguments, 1);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.assert))
-                return this._console.assert.apply(this._console, arguments);
+            // Jump back from the definition to the current selection
+            this._server.jumpBack(cm);
         },
-        '$clear':          function()
+        '_extraKeyAltDot':   function(cm)
         {
-            // Clear the console
-            this.clear();
-
-            // Call the native console function
-            if ($$.isFunction(this._console.clear))
-                return this._console.clear.apply(this._console, arguments);
+            // Jump to the definition of the current selection
+            this._server.jumpToDef(cm);
         },
-        '$debug':          function()
+        '_extraKeyCtrlDot':  function(cm)
         {
-            // Write the debug output
-            this.write(this.__type.writeDebugClass, this.__type.iconDebug, null, arguments, 0);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.debug))
-                return this._console.debug.apply(this._console, arguments);
+            // Select all occurrences of the current selection
+            this._server.selectName(cm);
         },
-        '$dir':            function()
+        '_extraKeyDot':      function(cm)
         {
-            // Set the dumping flag
-            this._dumping = true;
+            // Store a reference to the context
+            var $this = this;
 
-            // Write the dir output
-            this.write(this.__type.writeDirClass, null, null, arguments, 0);
-
-            // Reset the dumping flag
-            this._dumping = false;
-
-            // Call the native console function
-            if ($$.isFunction(this._console.dir))
-                return this._console.dir.apply(this._console, arguments);
-        },
-        '$error':          function()
-        {
-            // Write the error output
-            this.write(this.__type.writeErrorClass, this.__type.iconError, null, arguments, 0);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.error))
-                return this._console.error.apply(this._console, arguments);
-        },
-        '$group':          function($name)
-        {
-            // Push the group into the console
-            this.groupPush($name, false);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.group))
-                return this._console.group.apply(this._console, arguments);
-        },
-        '$groupCollapsed': function($name)
-        {
-            // Push the collapsed group into the console
-            this.groupPush($name, true);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.groupCollapsed))
-                return this._console.groupCollapsed.apply(this._console, arguments);
-        },
-        '$groupEnd':       function()
-        {
-            // Pop the current group from the console
-            this.groupPop();
-
-            // Call the native console function
-            if ($$.isFunction(this._console.groupEnd))
-                return this._console.groupEnd.apply(this._console, arguments);
-        },
-        '$info':           function()
-        {
-            // Write the info output
-            this.write(this.__type.writeInfoClass, this.__type.iconInfo, null, arguments, 0);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.info))
-                return this._console.info.apply(this._console, arguments);
-        },
-        '$log':            function()
-        {
-            // If the trace function is being called
-            if (this._tracing)
+            setTimeout(function()
             {
-                // Write the trace output
-                this.write(this.__type.writeTraceClass, this.__type.iconTrace, null, [$_stack($$.asString(arguments[0]), this._evaluating)], 0);
+                // Trigger the autocompletions
+                $this._server.complete(cm);
 
-                // Reset the tracing flag
-                this._tracing = false;
-            }
-            // Write the log output
-            else
-                this.write(this.__type.writeLogClass, null, null, arguments, 0);
+                // Get the hints
+                $this._hints = $('ul.CodeMirror-hints');
+            },
+            100);
 
-            // Call the native console function
-            if ($$.isFunction(this._console.log))
-                return this._console.log.apply(this._console, arguments);
+            // Return PASS
+            return CodeMirror.Pass;
         },
-        '$profile':        function($name)
+        '_cursorActivity':   function(cm)
         {
-            // FORMAT $name
-            $name = $$.asString($name);
-
-            // If a native console function is found
-            if ($$.isFunction(this._console.profile))
-            {
-                // Set the profile flag in the profiles lookup
-                this._profiles[$name] = true;
-
-                // Write the profile output
-                this.write(this.__type.writeProfileClass, this.__type.iconProfile, $$.format(this.__type.textProfile, $name), [], 0);
-
-                // Call the native console function
-                return this._console.profile.apply(this._console, arguments);
-            }
-            // Write the unsupported profile output
-            else
-                this.write(this.__type.writeProfileClass + ' ' + this.__type.unsupportedClass, this.__type.iconProfile, this.__type.textProfileUnsupported, [], 0);
-        },
-        '$profileEnd':     function($name)
-        {
-            // FORMAT $name
-            $name = $$.asString($name);
-
-            // If a native console function is found
-            if ($$.isFunction(this._console.profileEnd))
-            {
-                // If a profile flag was set in the profiles lookup, write the profile output
-                if (this._profiles[$name])
-                    this.write(this.__type.writeProfileEndClass, this.__type.iconProfile, $$.format(this.__type.textProfileEnd, $name), [], 0);
-
-                // Reset the profile flag in the profiles lookup
-                this._profiles[$name] = false;
-
-                // Call the native console function
-                return this._console.profileEnd.apply(this._console, arguments);
-            }
-        },
-        '$time':           function($name)
-        {
-            // FORMAT $name
-            $name = $$.asString($name);
-
-            // If any arguments were provided and a timer was not already set
-            if (arguments.length && !$$.isFinite(this._timers[$name]))
-            {
-                // Set the timer ticks
-                this._timers[$name] = Date.now();
-
-                // Write the time output
-                this.write(this.__type.writeTimeClass, this.__type.iconTime, this.__type.textTime, [$name], 0);
-            }
-
-            // Call the native console function
-            if ($$.isFunction(this._console.time))
-                return this._console.time.apply(this._console, arguments);
-        },
-        '$timeEnd':        function($name)
-        {
-            // FORMAT $name
-            $name = $$.asString($name);
-
-            // If any arguments were provided
-            if (arguments.length)
-            {
-                // Get the timer ticks
-                var $timestamp = this._timers[$name];
-
-                // If the timer ticks were set
-                if ($$.isFinite($timestamp))
-                {
-                    // Write the time output
-                    this.write(this.__type.writeTimeEndClass, this.__type.iconTime, this.__type.textTimeEnd, [$name], 0);
-
-                    // Write the timer output
-                    this.write(this.__type.writeTimerClass, this.__type.iconTimer, $$.format(this.__type.textTimer, Date.now() - $timestamp), [], 0);
-
-                    // Reset the timer
-                    this._timers[$name] = null;
-                }
-            }
-
-            // Call the native console function
-            if ($$.isFunction(this._console.timeEnd))
-                return this._console.timeEnd.apply(this._console, arguments);
-        },
-        '$timeStamp':      function()
-        {
-            // Get the current date and time
-            var $date = new Date();
-
-            // Get the hours, minutes, seconds, and milliseconds from the date
-            var $hours        = $_pad($date.getHours(), 2);
-            var $minutes      = $_pad($date.getMinutes(), 2);
-            var $seconds      = $_pad($date.getSeconds(), 2);
-            var $milliseconds = $_pad($date.getMilliseconds(), 3);
-
-            // Write the timestamp output
-            this.write(this.__type.writeTimeStampClass, this.__type.iconTime, $hours + ':' + $minutes + ':' + $seconds + '.' + $milliseconds, [], 0);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.timeStamp))
-                return this._console.timeStamp.apply(this._console, arguments);
-        },
-        '$trace':          function()
-        {
-            // Create an error and get the stack trace
-            var $error  = new Error();
-            var $stack  = $$.asString($error.stack);
-            var $return = undefined;
-
-            // Set the tracing flag
-            this._tracing = true;
-
-            // Call the native console function
-            if ($$.isFunction(this._console.trace))
-                $return = this._console.trace.apply(this._console, arguments);
-
-            // If no stack trace was found and a trace log was not intercepted
-            if (!$stack && this._tracing)
-            {
-                try
-                {
-                    // Throw an error
-                    undefined();
-                }
-                catch(e)
-                {
-                    // Get the stack trace
-                    $stack = $$.asString(e.stack);
-                }
-            }
-
-            // If a stack trace was found, write the trace output
-            if ($stack)
-                this.write(this.__type.writeTraceClass, this.__type.iconTrace, null, [$_stack($stack, this._evaluating)], 0);
-            // If a trace log was not intercepted, write the unsupported trace output
-            else if (this._tracing)
-                this.write(this.__type.writeTraceClass + ' ' + this.__type.unsupportedClass, this.__type.iconTrace, this.__type.textTraceUnsupported, [], 0);
-
-            // Reset the tracing flag
-            this._tracing = false;
-
-            // Return the native console function return value
-            return $return;
-        },
-        '$warn':           function()
-        {
-            // Write the warn output
-            this.write(this.__type.writeWarnClass, this.__type.iconWarn, null, arguments, 0);
-
-            // Call the native console function
-            if ($$.isFunction(this._console.warn))
-                return this._console.warn.apply(this._console, arguments);
+            // Update the argument hints when the cursor is moved
+            this._server.updateArgHints(cm);
         }
     },
     // ----- PROTECTED -----
@@ -1097,8 +1144,8 @@
             this.__base.refresh.apply(this, arguments);
 
             // Refresh the editor
-            if (this._editor)
-                this._editor.refresh();
+            //if (this._editor)
+            //    this._editor.refresh();
         },
 
         // WRITE
