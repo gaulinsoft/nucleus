@@ -19,7 +19,7 @@ The following code sample shows how to instantiate the console class:
 ```javascript
 jQuery(function($)
 {
-    window.demo = new $$.dev.Console(window, $('body'), '100%', '100%', 75, 'demo');
+    demo = new jTypes.Console(window, $('body'), '100%', '100%', 75, 'demo');
 });
 ```
 
