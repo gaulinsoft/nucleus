@@ -1,23 +1,43 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="utf-8" />
     <title>jTypes: JavaScript Console</title>
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-    <script type="text/javascript" src="http://cdn.jtypes.com/jtypes-2.1.7.min.js"></script>
     
-    <script type="text/javascript" src="js/codemirror.js"></script>
-    <script type="text/javascript" src="js/edit/matchbrackets.js"></script>
-    <script type="text/javascript" src="js/edit/continuecomment.js"></script>
-    <script type="text/javascript" src="js/comment/comment.js"></script>
-    <script type="text/javascript" src="js/mode/javascript.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="css/codemirror/codemirror.css" />
+    <link rel="stylesheet" type="text/css" href="css/codemirror/dialog.css" />
+    <link rel="stylesheet" type="text/css" href="css/codemirror/show-hint.css" />
+    <link rel="stylesheet" type="text/css" href="css/codemirror/tern.css" />
+    
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700" />
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+    <script type="text/javascript" src="http://cdn.jtypes.com/jtypes-2.2.2.min.js"></script>
+    
+    <script type="text/javascript" src="js/codemirror/codemirror.js"></script>
+    <script type="text/javascript" src="js/codemirror/mode/javascript.js"></script>
+    <script type="text/javascript" src="js/codemirror/edit/matchbrackets.js"></script>
+    <script type="text/javascript" src="js/codemirror/comment/continuecomment.js"></script>
+    <script type="text/javascript" src="js/codemirror/comment/comment.js"></script>
+    <script type="text/javascript" src="js/codemirror/dialog/dialog.js"></script>
+    <script type="text/javascript" src="js/codemirror/hint/show-hint.js"></script>
+    <script type="text/javascript" src="js/codemirror/tern/tern.js"></script>
+    <script type="text/javascript" src="js/acorn/acorn.js"></script>
+    <script type="text/javascript" src="js/acorn/acorn_loose.js"></script>
+    <script type="text/javascript" src="js/acorn/util/walk.js"></script>
+    <script type="text/javascript" src="js/tern/signal.js"></script>
+    <script type="text/javascript" src="js/tern/tern.js"></script>
+    <script type="text/javascript" src="js/tern/def.js"></script>
+    <script type="text/javascript" src="js/tern/comment.js"></script>
+    <script type="text/javascript" src="js/tern/infer.js"></script>
+    <script type="text/javascript" src="js/tern/defs/ecma5.js"></script>
+    <script type="text/javascript" src="js/tern/defs/browser.js"></script>
+    <script type="text/javascript" src="js/tern/defs/jquery.js"></script>
 
     <script type="text/javascript" src="Grid.js"></script>
     <script type="text/javascript" src="SplitGrid.js"></script>
     <script type="text/javascript" src="Console.js"></script>
-    
-    <link rel="stylesheet" type="text/css" href="css/reset.css" />
-    <link rel="stylesheet" type="text/css" href="css/codemirror.css" />
     <style type="text/css">
         /*
         // ############ HTML ############
@@ -34,6 +54,7 @@
 
         body
         {
+            font-family: 'Open Sans';
             height: 100%;
         }
 
@@ -335,14 +356,6 @@
                 background-color: #FFFFDD;
             }
 
-
-
-
-
-
-
-
-
         .console p > pre.primitive:not(.string)
         {
             font-style: italic;
@@ -422,7 +435,7 @@
     <script type="text/javascript">
         jQuery(function($)
         {
-            window.demo = new $$.dev.Console(window, $('body'), '100%', '100%', 75, 'demo');
+            window.demo = new jTypes.Console(window, $('body'), '100%', '100%', 75, 'demo');
         });
     </script>
 </head>
