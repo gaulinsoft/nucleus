@@ -4,7 +4,9 @@
 
 The jTypes JavaScript console was built for the upcoming jTypes interactive development environment (IDE). It provides an organized and easily customizable interface that is completely browser-independent. By utilizing jTypes classes, it demonstrates for developers the many benefits of using a class-based design pattern when working on large scale applications and libraries.
 
-This console can be quite useful for bloggers or on documentation pages to provide your users with the ability to not just read your code or have it highlighted, but also to actually execute it and experiment with it (when applicable).
+This console can be quite useful for bloggers or on documentation pages to provide your users with the ability to not just read your code or have it highlighted, but also to actually execute it and experiment with it. The console can also be injected into any non-SSL page using our CDN-hosted bookmarklet:
+
+http://www.jTypes.com/console
 
 *Please note that this console is still a work in progress as well. There are many more features currently in development, such as utilizing the SplitGrid class to inspect objects and arrays that are logged to the console, adding methods to gain more control over the code editor, creating filters for the output section, and much more. Please be sure to check out our social media links at the bottom of the jTypes homepage to follow us so you can be notified of any updates.*
 
