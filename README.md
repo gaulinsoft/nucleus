@@ -1,4 +1,6 @@
-# [jTypes: IDE](http://www.jTypes.com/develop) - Work In Progress
+# [nucleus](http://www.jTypes.com/develop): An expandable web-based development environment
+
+Nucleus is a web-based interactive development environment (IDE) that is currently under development. It will include native language support for fusion files such as `.fjs`, `.fhtml`, and `.fcss` along with fusion transcompiling. It will also offer a jTypes plugin that adds support for `.jt` and `.fjt` files, and built-in jTypes precompiling from `.jt` or `.fjt` to `.js` files.
 
 ## JavaScript Console
 
